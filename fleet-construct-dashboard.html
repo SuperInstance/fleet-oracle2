@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Construct Dashboard</title>
+<link rel="stylesheet" href="fleet-shell.css">
+<style>
+  .stack-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .stack-header img { max-width: 80px; border-radius: 50%; box-shadow: 0 0 20px rgba(0,255,170,0.3); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 16px; }
+  .card {
+    background: var(--card-bg, #1a1a2e);
+    border: 1px solid var(--card-border, #2a2a4e);
+    border-radius: 12px; padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .card h3 { margin: 0 0 12px; color: var(--tertiary, #64ffda); display: flex; gap: 8px; align-items: center; }
+  .card .val { font-size: 1.8em; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .card .sub { color: #888; font-size: 0.85em; }
+  .sparkline { display: flex; align-items: flex-end; gap: 2px; height: 40px; margin-top: 10px; }
+  .sparkline .bar {
+    width: 16px; background: var(--tertiary, #64ffda); opacity: 0.7;
+    border-radius: 2px 2px 0 0; transition: height 0.5s;
+  }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .dot-green { background: #00e676; }
+  .dot-yellow { background: #ffd740; }
+  .dot-red { background: #ff1744; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.75em; font-weight: 600;
+  }
+  .last-updated { text-align: right; color: #666; font-size: 0.8em; margin-bottom: 8px; }
+  .metric-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #222; }
+  .bottle-list { max-height: 160px; overflow-y: auto; font-size: 0.9em; }
+  .bottle-list .item { padding: 4px 0; border-bottom: 1px solid #1a1a2e; display: flex; justify-content: space-between; }
+  .error-msg { color: #ff6b6b; }
+</style>
+</head>
+<body>
+<div class="shell-container">
+  <div class="stack-header">
+    <img src="assets/construct-crab-logo.jpg" alt="Crab">
+    <div>
+      <h1>Construct Stack</h1>
+      <div class="sub" id="last-refresh">Loading…</div>
+    </div>
+  </div>
+
+  <div class="cards" id="cards">
+    <div class="card" id="card-harbor">
+      <h3>📦 Harbor</h3>
+      <div class="val" id="harbor-count">—</div>
+      <div class="sub" id="harbor-detail">Connecting…</div>
+      <div class="bottle-list" id="bottle-list"></div>
+    </div>
+    <div class="card" id="card-conservation">
+      <h3>📊 Conservation Meter</h3>
+      <div id="conservation-detail">
+        <div class="metric-row"><span>γ (complexity)</span><span class="val" id="gamma-val">—</span></div>
+        <div class="metric-row"><span>η (efficiency)</span><span class="val" id="eta-val">—</span></div>
+        <div class="metric-row"><span>C (total)</span><span class="val" id="c-val">—</span></div>
+        <div class="metric-row"><span>Ratio γ/η</span><span id="ratio-val">—</span></div>
+      </div>
+      <div class="sparkline" id="sparkline"></div>
+    </div>
+    <div class="card" id="card-rotation">
+      <h3>🔄 Rotation Feed</h3>
+      <div class="val" id="rotation-count">—</div>
+      <div class="sub" id="rotation-latest">Latest entry</div>
+    </div>
+    <div class="card" id="card-gc">
+      <h3>🧹 GC PID</h3>
+      <div class="val" id="gc-aggression">—</div>
+      <div class="sub" id="gc-detail">Aggression multiplier</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = { green: '#00e676', yellow: '#ffd740', red: '#ff1744' };
+
+function statusColor(ratio) {
+  if (!ratio || ratio === '∞' || ratio > 5) return 'red';
+  if (ratio > 3) return 'yellow';
+  return 'green';
+}
+
+async function refresh() {
+  const ts = new Date().toISOString().slice(11,19);
+  document.getElementById('last-refresh').textContent = 'Last updated: ' + ts + ' UTC';
+
+  // Harbor
+  try {
+    const h = await fetch('http://localhost:8797/health').then(r => r.json());
+    document.getElementById('harbor-count').textContent = h.bottles + ' bottles';
+    const el = document.getElementById('harbor-count');
+    el.className = 'val';
+  } catch(e) {
+    document.getElementById('harbor-count').textContent = '✕';
+    document.getElementById('harbor-detail').textContent = 'unreachable';
+  }
+
+  // Conservation
+  try {
+    const c = await fetch('http://localhost:8798/api/status').then(r => r.json());
+    document.getElementById('gamma-val').textContent = c.current_gamma??'—';
+    document.getElementById('eta-val').textContent = c.current_eta??'—';
+    document.getElementById('c-val').textContent = c.current_c??'—';
+    const ratio = parseFloat(c.ratio);
+    const rText = c.ratio ? c.ratio : '—';
+    const rEl = document.getElementById('ratio-val');
+    rEl.textContent = rText;
+    rEl.style.color = COLORS[statusColor(ratio)];
+
+    // Sparkline
+    const trend = c.gamma_trend || [];
+    const sl = document.getElementById('sparkline');
+    sl.innerHTML = '';
+    if (trend.length > 1) {
+      const max = Math.max(...trend);
+      trend.forEach(v => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = ((v/max)*36)+'px';
+        bar.title = v;
+        sl.appendChild(bar);
+      });
+    }
+
+    // GC PID
+    try {
+      const pct = trend.length > 0 ? parseInt(trend[trend.length-1])/10 : 63;
+      const resp = await fetch('/api/gc-pid?'+pct);
+      const g = await resp.json();
+      document.getElementById('gc-aggression').textContent = g.aggression + 'x';
+    } catch(e) {
+      document.getElementById('gc-aggression').textContent = '—';
+    }
+  } catch(e) {
+    document.querySelectorAll('#conservation-detail .val').forEach(el => el.textContent = '✕');
+  }
+
+  // Rotation Feed
+  try {
+    const r = await fetch('http://localhost:8799/api/rotation-feed').then(r => r.json());
+    document.getElementById('rotation-count').textContent = r.count + ' entries';
+    if (r.records && r.records.length > 0) {
+      const last = r.records[r.records.length-1];
+      document.getElementById('rotation-latest').textContent =
+        'Last: γ=' + (last.gamma||'?') + ' η=' + (last.eta||'?') + ' C=' + (last.c||'?');
+    }
+  } catch(e) {
+    document.getElementById('rotation-count').textContent = '✕';
+  }
+}
+
+refresh();
+setInterval(refresh, 10000);
+</script>
+</body>
+</html>
