@@ -1,0 +1,19 @@
+[Unit]
+Description=Rotation Feed Server — serves rotation-feed.json as JSON with CORS
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/.openclaw/workspace/construct
+ExecStart=/usr/bin/python3 /home/ubuntu/.openclaw/workspace/construct/scripts/rotation-feed-server.py
+Restart=on-failure
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rotation-feed-server
+
+[Install]
+WantedBy=multi-user.target

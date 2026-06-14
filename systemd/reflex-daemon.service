@@ -1,0 +1,20 @@
+[Unit]
+Description=Reflex Daemon — monitors fleet health and triggers self-healing
+After=network.target fleet-oracle.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/.openclaw/workspace/construct
+ExecStart=/bin/bash /home/ubuntu/.openclaw/workspace/construct/scripts/reflex-daemon.sh
+Restart=on-failure
+RestartSec=10
+Environment=RUST_BACKTRACE=0
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=reflex-daemon
+
+[Install]
+WantedBy=multi-user.target

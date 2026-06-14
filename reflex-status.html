@@ -3,117 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fleet Reflex Status</title>
+<title>Fleet Reflex Status · Co-Captain</title>
+<link rel="stylesheet" href="fleet-shell.css">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ── Page-specific styles ── */
 
-  :root {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --surface2: #1c2128;
-    --border: #30363d;
-    --text: #c9d1d9;
-    --muted: #8b949e;
-    --green: #3fb950;
-    --red: #f85149;
-    --yellow: #d29922;
-    --blue: #58a6ff;
-    --purple: #bc8cff;
-    --orange: #f0883e;
-    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-  }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font);
-    font-size: 14px;
-    line-height: 1.5;
-    min-height: 100vh;
-    padding: 24px;
-  }
-
-  h1 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 4px; }
-  .subtitle { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
-
-  /* ── Filter tabs ── */
-  .tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 0;
-  }
-  .tab {
-    padding: 8px 16px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--muted);
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-    user-select: none;
-  }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
-  .tab .count {
-    display: inline-block;
-    background: var(--surface2);
-    border-radius: 10px;
-    padding: 0 6px;
-    font-size: 11px;
-    margin-left: 4px;
-  }
-
-  /* ── Reflex cards ── */
+  /* Reflex card grid */
   .reflex-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
     gap: 12px;
   }
 
-  .reflex-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-    transition: border-color 0.2s;
-  }
-  .reflex-card:hover { border-color: #484f58; }
-
-  .reflex-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-  .reflex-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #fff;
-  }
-  .reflex-id {
-    font-size: 10px;
-    color: var(--muted);
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    margin-top: 2px;
-  }
-
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .badge-ok       { background: rgba(63,185,80,0.15);  color: var(--green); }
-  .badge-warn     { background: rgba(210,153,34,0.15); color: var(--yellow); }
-  .badge-error    { background: rgba(248,81,73,0.15);  color: var(--red); }
-  .badge-active   { background: rgba(88,166,255,0.15); color: var(--blue); }
-  .badge-idle     { background: rgba(139,148,158,0.15); color: var(--muted); }
-  .badge-unknown  { background: rgba(188,140,255,0.15);color: var(--purple); }
-
+  /* Reflex meta info inside shell-card-body */
   .reflex-meta {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -122,103 +24,137 @@
     font-size: 12px;
   }
   .meta-item { display: flex; flex-direction: column; }
-  .meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
-  .meta-value { color: var(--text); font-weight: 500; }
-  .meta-value.highlight { color: var(--blue); }
+  .meta-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--salvage);
+    opacity: 0.7;
+  }
+  .meta-value {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: #c9d1d9;
+  }
+  .meta-value.highlight { color: var(--brass); }
 
   .reflex-desc {
     margin-top: 8px;
+    font-family: var(--font-body);
     font-size: 12px;
-    color: var(--muted);
+    color: var(--salvage);
     line-height: 1.4;
   }
 
-  /* ── Status bar ── */
-  .status-bar {
+  /* Gauge mini-inline for each reflex card */
+  .reflex-gauge-row {
     display: flex;
-    gap: 20px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 20px;
-    margin-bottom: 20px;
-    font-size: 13px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
   }
-  .status-item { display: flex; align-items: center; gap: 6px; }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .status-dot.green { background: var(--green); }
-  .status-dot.yellow { background: var(--yellow); }
-  .status-dot.red { background: var(--red); }
-  .status-dot.purple { background: var(--purple); }
-  .status-count { font-weight: 700; color: #fff; }
 
-  /* ── Health sparkline ── */
-  .sparkline {
-    display: flex;
-    align-items: flex-end;
-    gap: 2px;
-    height: 24px;
-    margin-top: 8px;
+  /* Salvage Bay special spacing */
+  .salvage-section {
+    margin-top: 28px;
   }
-  .spark-bar {
-    flex: 1;
-    border-radius: 2px 2px 0 0;
-    min-width: 4px;
-    background: var(--blue);
-    opacity: 0.7;
-  }
-  .spark-bar.good { background: var(--green); }
-  .spark-bar.warn { background: var(--yellow); }
-  .spark-bar.bad  { background: var(--red); }
 </style>
 </head>
 <body>
 
-<h1>🧠 Fleet Reflex Status</h1>
-<div class="subtitle">Nebula worker reflex registry — real-time reflex health overview</div>
+<div class="carapace-nav" style="margin-bottom:20px;">
+  <div class="carapace-segment" data-segment="rotation" onclick="location.href='rotation-dashboard.html'">
+    <span class="segment-icon">🦀</span>
+    <span class="segment-label">Rotation</span>
+  </div>
+  <div class="carapace-segment" data-segment="agents" onclick="location.href='fleet-dashboard.html'">
+    <span class="segment-icon">⚙️</span>
+    <span class="segment-label">Fleet</span>
+  </div>
+  <div class="carapace-segment active" data-segment="reflexes">
+    <span class="segment-icon">📡</span>
+    <span class="segment-label">Reflexes</span>
+  </div>
+  <div class="carapace-segment" data-segment="oracle">
+    <span class="segment-icon">🔮</span>
+    <span class="segment-label">Oracle</span>
+  </div>
+  <div class="carapace-segment" data-segment="salvage">
+    <span class="segment-icon">🗄️</span>
+    <span class="segment-label">Shells</span>
+  </div>
+</div>
+
+<h1 class="dashboard-title" style="margin-bottom:4px;"><span class="crab-icon">🦀</span>FLEET REFLEX STATUS · Co-Captain</h1>
+<div class="subtitle" style="margin-bottom:24px;">Nebula reflex registry — real-time shell health overview</div>
 
 <!-- ── Status summary bar ── -->
-<div class="status-bar">
-  <div class="status-item">
-    <div class="status-dot green"></div>
-    <span class="status-count" id="count-active">—</span>
-    <span>Active</span>
+<div class="shell-status-bar">
+  <div class="shell-status-item">
+    <div class="shell-status-dot green"></div>
+    <span class="shell-status-count" id="count-active">—</span>
+    <span class="shell-status-label">Active</span>
   </div>
-  <div class="status-item">
-    <div class="status-dot yellow"></div>
-    <span class="status-count" id="count-idle">—</span>
-    <span>Idle</span>
+  <div class="shell-status-item">
+    <div class="shell-status-dot yellow"></div>
+    <span class="shell-status-count" id="count-idle">—</span>
+    <span class="shell-status-label">Idle</span>
   </div>
-  <div class="status-item">
-    <div class="status-dot red"></div>
-    <span class="status-count" id="count-error">—</span>
-    <span>Error</span>
+  <div class="shell-status-item">
+    <div class="shell-status-dot red"></div>
+    <span class="shell-status-count" id="count-error">—</span>
+    <span class="shell-status-label">Error</span>
   </div>
-  <div class="status-item">
-    <div class="status-dot purple"></div>
-    <span class="status-count" id="count-unknown">—</span>
-    <span>Unknown</span>
+  <div class="shell-status-item">
+    <div class="shell-status-dot purple"></div>
+    <span class="shell-status-count" id="count-unknown">—</span>
+    <span class="shell-status-label">Unknown</span>
   </div>
-  <div style="margin-left:auto; color:var(--muted); font-size:12px;">
+  <div style="margin-left:auto; color:var(--salvage); font-family:var(--font-mono); font-size:11px;">
     Last scan: <span id="last-scan">—</span>
   </div>
 </div>
 
 <!-- ── Filter tabs ── -->
-<div class="tabs">
-  <div class="tab active" data-filter="all">All <span class="count" id="tab-all">—</span></div>
-  <div class="tab" data-filter="active">Active <span class="count" id="tab-active">—</span></div>
-  <div class="tab" data-filter="idle">Idle <span class="count" id="tab-idle">—</span></div>
-  <div class="tab" data-filter="error">Error <span class="count" id="tab-error">—</span></div>
+<div class="shell-tabs">
+  <div class="shell-tab active" data-filter="all">All <span class="count" id="tab-all">—</span></div>
+  <div class="shell-tab" data-filter="active">Active <span class="count" id="tab-active">—</span></div>
+  <div class="shell-tab" data-filter="idle">Idle <span class="count" id="tab-idle">—</span></div>
+  <div class="shell-tab" data-filter="error">Error <span class="count" id="tab-error">—</span></div>
 </div>
 
 <!-- ── Reflex cards grid ── -->
 <div class="reflex-grid" id="reflex-grid">
-  <div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px;">Loading reflex registry…</div>
+  <div style="grid-column:1/-1;text-align:center;color:var(--salvage);padding:40px;">
+    <div class="cog-spinner" aria-label="Loading">
+      <div class="cog-spinner-inner">
+        <svg class="cog" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="16" fill="none" stroke="var(--brass)" stroke-width="2" opacity="0.6"/>
+          <g class="cog-teeth" fill="none" stroke="var(--brass)" stroke-width="2.5">
+            <rect x="27" y="2" width="10" height="8" rx="1"/>
+            <rect x="27" y="54" width="10" height="8" rx="1"/>
+            <rect x="2" y="27" width="8" height="10" rx="1"/>
+            <rect x="54" y="27" width="8" height="10" rx="1"/>
+            <rect x="9.5" y="9.5" width="10" height="8" rx="1" transform="rotate(45 14.5 13.5)"/>
+            <rect x="44.5" y="9.5" width="10" height="8" rx="1" transform="rotate(45 49.5 13.5)"/>
+            <rect x="9.5" y="46.5" width="10" height="8" rx="1" transform="rotate(45 14.5 50.5)"/>
+            <rect x="44.5" y="46.5" width="10" height="8" rx="1" transform="rotate(45 49.5 50.5)"/>
+          </g>
+          <circle cx="32" cy="32" r="6" fill="none" stroke="var(--brass)" stroke-width="2" opacity="0.5"/>
+          <circle cx="32" cy="32" r="2" fill="var(--brass)" opacity="0.7"/>
+        </svg>
+        <div class="claw-tick"></div>
+      </div>
+      <span class="cog-label">Loading reflex registry…</span>
+    </div>
+  </div>
 </div>
 
 <script>
-// ── Mock reflex data ─────────────────────────────────────────────────────────
+// ── Reflex data ──────────────────────────────────────────────────────────
 const REFLEXES = [
   {
     id: 'reflex-001',
@@ -231,6 +167,7 @@ const REFLEXES = [
     cooldown_s: 30,
     description: 'Trips when error rate exceeds 5% within a 60s rolling window. Resets after 30s cooldown.',
     tags: ['protection', 'circuit-breaker', 'v1'],
+    salvage: false,
   },
   {
     id: 'reflex-002',
@@ -243,6 +180,7 @@ const REFLEXES = [
     cooldown_s: 300,
     description: 'Predicts GC pressure 5 minutes ahead using the ternary advisor. Triggers anticipatory collection.',
     tags: ['gc', 'predictive', 'memory'],
+    salvage: false,
   },
   {
     id: 'reflex-003',
@@ -255,6 +193,7 @@ const REFLEXES = [
     cooldown_s: 5,
     description: 'Redirects traffic away from overloaded fleet-midi agents when load exceeds threshold.',
     tags: ['routing', 'load-balancer'],
+    salvage: false,
   },
   {
     id: 'reflex-004',
@@ -267,6 +206,7 @@ const REFLEXES = [
     cooldown_s: 600,
     description: 'Activates when system entropy exceeds expected rhythm anomaly threshold. Rare trigger.',
     tags: ['anomaly', 'entropy', 'rhythm'],
+    salvage: false,
   },
   {
     id: 'reflex-005',
@@ -279,6 +219,7 @@ const REFLEXES = [
     cooldown_s: 120,
     description: 'Routes decisions to secondary oracle when primary fleet-oracle is unreachable or returns 5xx.',
     tags: ['failover', 'oracle', 'routing'],
+    salvage: false,
   },
   {
     id: 'reflex-006',
@@ -291,6 +232,7 @@ const REFLEXES = [
     cooldown_s: 3600,
     description: 'Escalates disk pressure alert when usage exceeds 85% and is growing faster than 1%/hour.',
     tags: ['disk', 'pressure', 'escalation'],
+    salvage: false,
   },
   {
     id: 'reflex-007',
@@ -303,6 +245,7 @@ const REFLEXES = [
     cooldown_s: 1,
     description: 'Deduplicates rapid-fire reflex triggers within a 1s window to prevent cascade loops.',
     tags: ['dedup', 'cascade', 'suppression'],
+    salvage: false,
   },
   {
     id: 'reflex-008',
@@ -315,6 +258,7 @@ const REFLEXES = [
     cooldown_s: 60,
     description: 'Blocks oracle decisions when SVM confidence drops below 0.4, forcing exploration mode.',
     tags: ['svm', 'confidence', 'gate'],
+    salvage: false,
   },
   {
     id: 'reflex-009',
@@ -327,6 +271,7 @@ const REFLEXES = [
     cooldown_s: 60,
     description: 'Attempts to restart a fleet-midi agent that has become unresponsive. Has a 3-retry limit.',
     tags: ['restart', 'midi', 'recovery'],
+    salvage: false,
   },
   {
     id: 'reflex-010',
@@ -339,6 +284,7 @@ const REFLEXES = [
     cooldown_s: 15,
     description: 'Monitors rotation cycle error and blocks new rotation if error exceeds 2.0 standard deviations.',
     tags: ['rotation', 'guard', 'cycle'],
+    salvage: false,
   },
   {
     id: 'reflex-011',
@@ -351,6 +297,7 @@ const REFLEXES = [
     cooldown_s: 1800,
     description: 'Drains fleet-event backlog when queue depth exceeds 10k messages to prevent event starvation.',
     tags: ['event-bus', 'drain', 'backpressure'],
+    salvage: false,
   },
   {
     id: 'reflex-012',
@@ -363,24 +310,60 @@ const REFLEXES = [
     cooldown_s: 45,
     description: 'Forces ternary retreat mode when host load exceeds 8.0, halting non-critical fleet operations.',
     tags: ['ternary', 'retreat', 'load'],
+    salvage: false,
+  },
+  // ── Salvage Bay entries ──
+  {
+    id: 'reflex-900',
+    name: 'legacy-throttle-v0',
+    status: 'dead',
+    health: 0.05,
+    latency_ms: 0,
+    hit_count: 0,
+    last_trigger: '2026-04-01T00:00:00Z',
+    cooldown_s: 0,
+    description: 'Defunct throttle mechanism. Superseded by circuit-breaker-v1. No longer wired in.',
+    tags: ['deprecated', 'throttle', 'legacy'],
+    salvage: true,
+  },
+  {
+    id: 'reflex-901',
+    name: 'old-rate-limiter-alpha',
+    status: 'dead',
+    health: 0.00,
+    latency_ms: 0,
+    hit_count: 0,
+    last_trigger: '2026-03-15T12:00:00Z',
+    cooldown_s: 0,
+    description: 'Alpha-stage rate limiter. Disabled after introducing load-balancer-redirect. Awaiting recycling.',
+    tags: ['deprecated', 'rate-limiter', 'alpha'],
+    salvage: true,
+  },
+  {
+    id: 'reflex-902',
+    name: 'manual-override-toggle',
+    status: 'dead',
+    health: 0.00,
+    latency_ms: 0,
+    hit_count: 0,
+    last_trigger: '2025-11-30T00:00:00Z',
+    cooldown_s: 0,
+    description: 'Allows manual override of fleet rotation decisions. Deemed unsafe and removed from active registry.',
+    tags: ['deprecated', 'manual', 'unsafe'],
+    salvage: true,
   },
 ];
 
 // ── Render ─────────────────────────────────────────────────────────────────
 let currentFilter = 'all';
 
-function healthClass(h) {
-  if (h >= 0.9) return 'good';
-  if (h >= 0.6) return 'warn';
-  return 'bad';
-}
-
-function sparklineBars(historical) {
-  if (!historical || historical.length === 0) return '';
-  return historical.map(h => {
-    const cls = healthClass(h);
-    return `<div class="spark-bar ${cls}" style="height:${Math.round(h * 100)}%"></div>`;
-  }).join('');
+function getMiniGaugeHTML(value) {
+  const pct = Math.round(value * 100);
+  const cls = value >= 0.7 ? 'green' : value >= 0.4 ? 'yellow' : 'red';
+  return `<div class="mini-gauge ${cls}">
+    <div class="mini-gauge-dot"></div>
+    <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--bio-glow);">${pct}%</span>
+  </div>`;
 }
 
 function timeAgo(ts) {
@@ -392,74 +375,119 @@ function timeAgo(ts) {
   return Math.round(diff / 86400) + 'd ago';
 }
 
-function badgeForStatus(status) {
-  const map = {
-    active: ['badge-active', 'ACTIVE'],
-    idle:   ['badge-idle',   'IDLE'],
-    error:  ['badge-error',  'ERROR'],
-    unknown:['badge-unknown','UNKNOWN'],
-  };
-  const [cls, txt] = map[status] || map.unknown;
-  return `<span class="badge ${cls}">${txt}</span>`;
-}
-
 function renderReflexes(filter) {
   const grid = document.getElementById('reflex-grid');
-  const filtered = filter === 'all' ? REFLEXES : REFLEXES.filter(r => r.status === filter);
+  const active = REFLEXES.filter(r => !r.salvage);
+  const salvage = REFLEXES.filter(r => r.salvage);
 
-  if (filtered.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px;">No reflexes match this filter.</div>';
-    return;
+  let activeFiltered = active;
+  let salvageFiltered = salvage;
+  if (filter !== 'all') {
+    activeFiltered = active.filter(r => r.status === filter);
+    salvageFiltered = salvage.filter(r => r.status === filter);
   }
 
-  grid.innerHTML = filtered.map(r => `
-    <div class="reflex-card">
-      <div class="reflex-header">
-        <div>
-          <div class="reflex-name">${r.name}</div>
-          <div class="reflex-id">${r.id}</div>
-        </div>
-        ${badgeForStatus(r.status)}
+  let html = '';
+
+  // Active section
+  if (activeFiltered.length === 0) {
+    html += '<div style="grid-column:1/-1;text-align:center;color:var(--salvage);padding:40px;">No active reflexes match this filter.</div>';
+  } else {
+    activeFiltered.forEach(r => {
+      html += buildReflexCard(r, false);
+    });
+  }
+
+  // Salvage Bay section (only shown when filter is 'all' or 'dead')
+  if (filter === 'all' || filter === 'dead' || filter === 'error') {
+    const showSalvage = filter === 'all' ? salvage : salvageFiltered;
+    if (showSalvage.length > 0) {
+      html += `<div class="salvage-section" style="grid-column:1/-1;">`;
+      html += `<div class="shell-section-divider"></div>`;
+      html += `<h2 class="shell-rust-title">🗄️ Salvage Bay</h2>`;
+      html += `<div class="reflex-grid">`;
+      showSalvage.forEach(r => {
+        html += buildReflexCard(r, true);
+      });
+      html += `</div></div>`;
+    }
+  }
+
+  grid.innerHTML = html;
+}
+
+function buildReflexCard(r, isSalvage) {
+  const cardExtra = isSalvage ? ' rust-card' : '';
+  const healthPct = Math.round(r.health * 100);
+  const healthCls = r.health >= 0.7 ? 'bio' : r.health >= 0.4 ? 'amber' : 'rust';
+  const statusMap = {
+    active: ['shell-badge-active', 'ACTIVE'],
+    idle:   ['shell-badge-warn',   'IDLE'],
+    error:  ['shell-badge-down',   'ERROR'],
+    dead:   ['shell-badge-down',   'DEAD'],
+    unknown:['shell-badge-down',   'UNKNOWN'],
+  };
+  const [badgeCls, badgeTxt] = statusMap[r.status] || statusMap.unknown;
+
+  return `
+    <div class="shell-card${cardExtra}">
+      <div class="shell-card-header">
+        <span class="shell-card-icon">${isSalvage ? '🗄️' : '⚡'}</span>
+        <span class="shell-card-title">${r.name}</span>
+        <span class="shell-badge ${badgeCls}">${badgeTxt}</span>
       </div>
-      <div class="reflex-desc">${r.description}</div>
-      <div class="reflex-meta">
-        <div class="meta-item">
-          <span class="meta-label">Health</span>
-          <span class="meta-value highlight">${(r.health * 100).toFixed(0)}%</span>
+      <div class="shell-card-body">
+        <div class="reflex-gauge-row">
+          ${getMiniGaugeHTML(r.health)}
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--salvage);">${r.id}</span>
         </div>
-        <div class="meta-item">
-          <span class="meta-label">Latency</span>
-          <span class="meta-value">${r.latency_ms}ms</span>
+        <div class="reflex-desc">${r.description}</div>
+        <div class="shell-progress-bar" style="margin-top:10px;">
+          <div class="shell-progress-fill${isSalvage ? ' rust-glow' : ''}" style="width:${healthPct}%"></div>
         </div>
-        <div class="meta-item">
-          <span class="meta-label">Hit Count</span>
-          <span class="meta-value">${r.hit_count.toLocaleString()}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Last Trigger</span>
-          <span class="meta-value">${timeAgo(r.last_trigger)}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Cooldown</span>
-          <span class="meta-value">${r.cooldown_s}s</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Tags</span>
-          <span class="meta-value" style="font-size:10px;color:var(--purple);">${r.tags.join(', ')}</span>
+        <div class="reflex-meta">
+          <div class="meta-item">
+            <span class="meta-label">Health</span>
+            <span class="meta-value highlight" style="color:var(--${healthCls});">${healthPct}%</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Latency</span>
+            <span class="meta-value">${r.latency_ms}ms</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Hit Count</span>
+            <span class="meta-value">${r.hit_count.toLocaleString()}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Last Trigger</span>
+            <span class="meta-value">${timeAgo(r.last_trigger)}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Cooldown</span>
+            <span class="meta-value">${r.cooldown_s}s</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Tags</span>
+            <span class="meta-value" style="font-size:10px;color:var(--magenta);">${r.tags.join(', ')}</span>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+      <div class="shell-card-footer">
+        <span class="shell-timestamp">${timeAgo(r.last_trigger)}</span>
+        <span class="shell-ref">${r.id.toUpperCase()}</span>
+      </div>
+    </div>`;
 }
 
 function updateCounts() {
-  const byStatus = (s) => REFLEXES.filter(r => r.status === s).length;
+  const active = REFLEXES.filter(r => !r.salvage);
+  const byStatus = (s) => active.filter(r => r.status === s).length;
   document.getElementById('count-active').textContent = byStatus('active');
   document.getElementById('count-idle').textContent   = byStatus('idle');
   document.getElementById('count-error').textContent  = byStatus('error');
   document.getElementById('count-unknown').textContent = byStatus('unknown');
 
-  document.getElementById('tab-all').textContent    = REFLEXES.length;
+  document.getElementById('tab-all').textContent    = active.length;
   document.getElementById('tab-active').textContent  = byStatus('active');
   document.getElementById('tab-idle').textContent    = byStatus('idle');
   document.getElementById('tab-error').textContent  = byStatus('error');
@@ -468,9 +496,9 @@ function updateCounts() {
 }
 
 // ── Tab handling ────────────────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(tab => {
+document.querySelectorAll('.shell-tab').forEach(tab => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.shell-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     currentFilter = tab.dataset.filter;
     renderReflexes(currentFilter);

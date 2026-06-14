@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet Dashboard · Co-Captain</title>
+<link rel="stylesheet" href="fleet-shell.css">
+<style>
+  /* ── Page-specific overrides ── */
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    z-index: 1;
+    position: relative;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* ── Hero logo ── */
+  .hero-logo {
+    max-width: 120px;
+    border-radius: 50%;
+    box-shadow: 0 0 20px var(--bio-shadow);
+    flex-shrink: 0;
+    animation: shell-glow 4s ease-in-out infinite;
+  }
+
+  /* ── Fleet grid ── */
+  .fleet-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    z-index: 1;
+    position: relative;
+  }
+  .fleet-grid .full-width {
+    grid-column: 1 / -1;
+  }
+  @media (max-width: 860px) {
+    .fleet-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Host metric tiles ── */
+  .metrics-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .metric-tile {
+    background: rgba(12, 15, 21, 0.5);
+    border: 1px solid rgba(201, 168, 76, 0.12);
+    border-radius: 8px;
+    padding: 10px 14px;
+    flex: 1;
+    min-width: 90px;
+  }
+  .metric-tile .metric-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--salvage);
+    opacity: 0.7;
+  }
+  .metric-tile .metric-value {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-top: 3px;
+  }
+  .metric-tile .metric-value.ok  { color: var(--bio-glow); text-shadow: 0 0 8px var(--bio-shadow); }
+  .metric-tile .metric-value.warn { color: var(--amber); text-shadow: 0 0 8px var(--amber-shadow); }
+  .metric-tile .metric-value.bad  { color: var(--rust); text-shadow: 0 0 8px var(--rust-shadow); }
+
+  /* ── Service status grid ── */
+  .service-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .service-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(12, 15, 21, 0.4);
+    border: 1px solid rgba(201, 168, 76, 0.08);
+  }
+  .service-icon { font-size: 16px; }
+  .service-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    flex: 1;
+  }
+  .service-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .service-dot.green { background: var(--bio-glow); box-shadow: 0 0 5px var(--bio-glow); }
+  .service-dot.yellow { background: var(--amber); box-shadow: 0 0 5px var(--amber-shadow); }
+  .service-dot.red { background: var(--rust); box-shadow: 0 0 5px var(--rust-shadow); }
+
+  /* ── Gauge unit in card body ── */
+  .gauge-inline-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+
+  /* ── Footer ── */
+  .fleet-footer {
+    text-align: center;
+    margin-top: 28px;
+    padding: 20px;
+    font-family: var(--font-title);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--brass);
+    opacity: 0.5;
+    letter-spacing: 0.06em;
+    z-index: 1;
+    position: relative;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ Carapace Nav ═══ -->
+<div class="carapace-nav" style="margin-bottom:20px;">
+  <div class="carapace-segment active" data-segment="overview">
+    <span class="segment-icon">📊</span>
+    <span class="segment-label">Overview</span>
+  </div>
+  <div class="carapace-segment" data-segment="agents" onclick="location.href='#'">
+    <span class="segment-icon">🤖</span>
+    <span class="segment-label">Agents</span>
+  </div>
+  <div class="carapace-segment" data-segment="rotation" onclick="location.href='rotation-dashboard.html'">
+    <span class="segment-icon">🦀</span>
+    <span class="segment-label">Rotation</span>
+  </div>
+  <div class="carapace-segment" data-segment="modules" onclick="location.href='#'">
+    <span class="segment-icon">🧩</span>
+    <span class="segment-label">Modules</span>
+  </div>
+  <div class="carapace-segment" data-segment="salvage" onclick="location.href='reflex-status.html'">
+    <span class="segment-icon">🗄️</span>
+    <span class="segment-label">Salvage Bay</span>
+  </div>
+</div>
+
+<!-- ═══ Header ═══ -->
+<div class="header-row">
+  <img src="assets/logo.jpg" class="hero-logo" alt="Fleet Emblem">
+  <div>
+    <h1 class="dashboard-title"><span class="crab-icon">🦀</span>FLEET DASHBOARD · Overview</h1>
+    <div class="subtitle" id="subtitle">Loading fleet telemetry…</div>
+  </div>
+  <button class="shell-btn" id="refresh-btn" onclick="refreshFleet()">↻ Refresh</button>
+</div>
+
+<!-- ═══ Error banner ═══ -->
+<div class="shell-error-banner" id="error-banner"></div>
+
+<!-- ═══ Status summary bar ═══ -->
+<div class="shell-status-bar" id="status-bar">
+  <div class="shell-status-item">
+    <div class="shell-status-dot green"></div>
+    <span class="shell-status-count" id="count-host-ok">—</span>
+    <span class="shell-status-label">Hosts OK</span>
+  </div>
+  <div class="shell-status-item">
+    <div class="shell-status-dot yellow"></div>
+    <span class="shell-status-count" id="count-host-warn">—</span>
+    <span class="shell-status-label">Warning</span>
+  </div>
+  <div class="shell-status-item">
+    <div class="shell-status-dot red"></div>
+    <span class="shell-status-count" id="count-host-down">—</span>
+    <span class="shell-status-label">Critical</span>
+  </div>
+  <div class="shell-status-item">
+    <div class="shell-status-dot purple"></div>
+    <span class="shell-status-count" id="count-services">—</span>
+    <span class="shell-status-label">Services</span>
+  </div>
+  <div style="margin-left:auto; color:var(--salvage); font-family:var(--font-mono); font-size:11px;">
+    Updated: <span id="last-updated">—</span>
+  </div>
+</div>
+
+<!-- ═══ Fleet grid ═══ -->
+<div class="fleet-grid" id="fleet-grid">
+  <!-- Populated by JS -->
+  <div style="grid-column:1/-1;text-align:center;color:var(--salvage);padding:60px;">
+    <div class="cog-spinner" aria-label="Loading fleet data">
+      <div class="cog-spinner-inner">
+        <svg class="cog" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="16" fill="none" stroke="var(--brass)" stroke-width="2" opacity="0.6"/>
+          <g class="cog-teeth" fill="none" stroke="var(--brass)" stroke-width="2.5">
+            <rect x="27" y="2" width="10" height="8" rx="1"/>
+            <rect x="27" y="54" width="10" height="8" rx="1"/>
+            <rect x="2" y="27" width="8" height="10" rx="1"/>
+            <rect x="54" y="27" width="8" height="10" rx="1"/>
+            <rect x="9.5" y="9.5" width="10" height="8" rx="1" transform="rotate(45 14.5 13.5)"/>
+            <rect x="44.5" y="9.5" width="10" height="8" rx="1" transform="rotate(45 49.5 13.5)"/>
+            <rect x="9.5" y="46.5" width="10" height="8" rx="1" transform="rotate(45 14.5 50.5)"/>
+            <rect x="44.5" y="46.5" width="10" height="8" rx="1" transform="rotate(45 49.5 50.5)"/>
+          </g>
+          <circle cx="32" cy="32" r="6" fill="none" stroke="var(--brass)" stroke-width="2" opacity="0.5"/>
+          <circle cx="32" cy="32" r="2" fill="var(--brass)" opacity="0.7"/>
+        </svg>
+        <div class="claw-tick"></div>
+      </div>
+      <span class="cog-label">Loading fleet telemetry…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Footer ═══ -->
+<div class="fleet-footer">The crab inherits the shell.</div>
+
+<script>
+// ── Mock Fleet Data ─────────────────────────────────────────────────────────
+
+const FLEET_HOSTS = [
+  {
+    id: 'host-001', name: 'fleet-primary', role: 'orchestrator',
+    disk_pct: 68, ram_gb: 7.2, ram_total: 16, load: 2.1, uptime_h: 312,
+    services: [
+      { name: 'oracle', status: 'green', icon: '🔮' },
+      { name: 'rotation-feed', status: 'green', icon: '🦀' },
+      { name: 'reflex-engine', status: 'green', icon: '⚡' },
+      { name: 'event-bus', status: 'green', icon: '📨' },
+      { name: 'shell-gateway', status: 'green', icon: '🏗️' },
+    ],
+  },
+  {
+    id: 'host-002', name: 'fleet-midi-01', role: 'worker',
+    disk_pct: 82, ram_gb: 3.8, ram_total: 8, load: 5.3, uptime_h: 184,
+    services: [
+      { name: 'midi-agent', status: 'green', icon: '🤖' },
+      { name: 'pulse-collector', status: 'green', icon: '📡' },
+      { name: 'state-cache', status: 'yellow', icon: '💾' },
+    ],
+  },
+  {
+    id: 'host-003', name: 'fleet-midi-02', role: 'worker',
+    disk_pct: 44, ram_gb: 5.9, ram_total: 8, load: 1.8, uptime_h: 96,
+    services: [
+      { name: 'midi-agent', status: 'green', icon: '🤖' },
+      { name: 'pulse-collector', status: 'green', icon: '📡' },
+      { name: 'state-cache', status: 'green', icon: '💾' },
+    ],
+  },
+  {
+    id: 'host-004', name: 'fleet-midi-03', role: 'worker',
+    disk_pct: 91, ram_gb: 2.1, ram_total: 8, load: 8.7, uptime_h: 48,
+    services: [
+      { name: 'midi-agent', status: 'red', icon: '🤖' },
+      { name: 'pulse-collector', status: 'yellow', icon: '📡' },
+    ],
+  },
+  {
+    id: 'host-005', name: 'fleet-storage', role: 'storage',
+    disk_pct: 56, ram_gb: 4.4, ram_total: 8, load: 0.6, uptime_h: 720,
+    services: [
+      { name: 'crab-db', status: 'green', icon: '🐚' },
+      { name: 'backup-agent', status: 'green', icon: '💿' },
+      { name: 'salvage-index', status: 'green', icon: '🗄️' },
+    ],
+  },
+  {
+    id: 'host-006', name: 'fleet-gateway', role: 'edge',
+    disk_pct: 34, ram_gb: 3.2, ram_total: 4, load: 1.2, uptime_h: 480,
+    services: [
+      { name: 'shell-proxy', status: 'green', icon: '🌐' },
+      { name: 'auth-gate', status: 'green', icon: '🔐' },
+      { name: 'rate-limiter', status: 'green', icon: '⏱️' },
+    ],
+  },
+];
+
+// ── Helper ──────────────────────────────────────────────────────────────────
+
+function hostHealth(host) {
+  const issues = [];
+  if (host.disk_pct > 85) issues.push('disk');
+  if (host.ram_gb / host.ram_total < 0.15) issues.push('ram');
+  if (host.load > 8) issues.push('load');
+  const svcDown = host.services.filter(s => s.status === 'red');
+  const svcWarn = host.services.filter(s => s.status === 'yellow');
+  if (svcDown.length > 0) return 'red';
+  if (issues.length > 0 || svcWarn.length > 0) return 'yellow';
+  return 'green';
+}
+
+function diskCls(pct) { return pct > 85 ? 'bad' : pct > 65 ? 'warn' : 'ok'; }
+function ramCls(free, total) { const r = free / total; return r < 0.15 ? 'bad' : r < 0.4 ? 'warn' : 'ok'; }
+function loadCls(l) { return l > 8 ? 'bad' : l > 4 ? 'warn' : 'ok'; }
+function barCls(pct) { return pct > 85 ? 'rust-glow' : pct > 65 ? 'amber-glow' : ''; }
+
+function formatUptime(h) {
+  if (h >= 24) return (h / 24).toFixed(1) + 'd';
+  return h + 'h';
+}
+
+function timeStr() {
+  return new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+
+function renderFleet() {
+  const grid = document.getElementById('fleet-grid');
+
+  // Build counts
+  const green = FLEET_HOSTS.filter(h => hostHealth(h) === 'green').length;
+  const yellow = FLEET_HOSTS.filter(h => hostHealth(h) === 'yellow').length;
+  const red = FLEET_HOSTS.filter(h => hostHealth(h) === 'red').length;
+  const totalSvcs = FLEET_HOSTS.reduce((s, h) => s + h.services.length, 0);
+
+  document.getElementById('count-host-ok').textContent = green;
+  document.getElementById('count-host-warn').textContent = yellow;
+  document.getElementById('count-host-down').textContent = red;
+  document.getElementById('count-services').textContent = totalSvcs;
+  document.getElementById('last-updated').textContent = timeStr();
+  document.getElementById('subtitle').textContent =
+    FLEET_HOSTS.length + ' hosts · ' + totalSvcs + ' services · last scan ' + timeStr();
+
+  // Render each host as a shell card
+  let html = '';
+  FLEET_HOSTS.forEach(host => {
+    const hh = hostHealth(host);
+    const uptimeStr = formatUptime(host.uptime_h);
+    const ramBarPct = ((1 - host.ram_gb / host.ram_total) * 100).toFixed(0);
+    const diskBarPct = host.disk_pct;
+
+    const badgeCls = hh === 'green' ? 'shell-badge-active'
+      : hh === 'yellow' ? 'shell-badge-warn' : 'shell-badge-down';
+    const badgeTxt = hh === 'green' ? 'HEALTHY' : hh === 'yellow' ? 'WARNING' : 'CRITICAL';
+
+    // Role icon
+    const roleIcons = { orchestrator: '🎯', worker: '⚙️', storage: '💾', edge: '🌐' };
+    const roleIcon = roleIcons[host.role] || '📦';
+
+    // Services list
+    const svcHtml = host.services.map(s => {
+      return `<div class="service-item">
+        <span class="service-icon">${s.icon}</span>
+        <span class="service-name">${s.name}</span>
+        <div class="service-dot ${s.status}"></div>
+      </div>`;
+    }).join('');
+
+    html += `
+      <div class="shell-card${hh === 'red' ? ' rust-card' : ''}">
+        <div class="shell-card-header">
+          <span class="shell-card-icon">${roleIcon}</span>
+          <span class="shell-card-title">${host.name}</span>
+          <span class="shell-badge ${badgeCls}">${badgeTxt}</span>
+        </div>
+        <div class="shell-card-body">
+          <div class="metrics-row">
+            <div class="metric-tile">
+              <div class="metric-label">Disk</div>
+              <div class="metric-value ${diskCls(host.disk_pct)}">${host.disk_pct}%</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">RAM Free</div>
+              <div class="metric-value ${ramCls(host.ram_gb, host.ram_total)}">${host.ram_gb.toFixed(1)}GB</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Load</div>
+              <div class="metric-value ${loadCls(host.load)}">${host.load.toFixed(1)}</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Uptime</div>
+              <div class="metric-value ok">${uptimeStr}</div>
+            </div>
+          </div>
+
+          <!-- Progress bars -->
+          <div style="margin-bottom:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--font-mono);color:var(--salvage);margin-bottom:2px;">
+              <span>Disk</span><span>${host.disk_pct}%</span>
+            </div>
+            <div class="shell-progress-bar">
+              <div class="shell-progress-fill ${barCls(host.disk_pct)}" style="width:${host.disk_pct}%"></div>
+            </div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--font-mono);color:var(--salvage);margin-bottom:2px;">
+              <span>RAM</span><span>${host.ram_gb.toFixed(1)} / ${host.ram_total} GB</span>
+            </div>
+            <div class="shell-progress-bar">
+              <div class="shell-progress-fill ${barCls((1 - host.ram_gb / host.ram_total) * 100)}" style="width:${ramBarPct}%"></div>
+            </div>
+          </div>
+
+          <!-- Services -->
+          <div class="section-title" style="font-size:12px;margin-bottom:6px;margin-top:4px;">Services</div>
+          <div class="service-grid">${svcHtml}</div>
+        </div>
+        <div class="shell-card-footer">
+          <span class="shell-timestamp">Uptime ${uptimeStr} · role: ${host.role}</span>
+          <span class="shell-ref">${host.id.toUpperCase()}</span>
+        </div>
+      </div>`;
+  });
+
+  // Add full-width aggregated summary card at the bottom
+  const allOk = FLEET_HOSTS.reduce((s, h) => s + h.services.filter(sv => sv.status === 'green').length, 0);
+  const allWarn = FLEET_HOSTS.reduce((s, h) => s + h.services.filter(sv => sv.status === 'yellow').length, 0);
+  const allDown = FLEET_HOSTS.reduce((s, h) => s + h.services.filter(sv => sv.status === 'red').length, 0);
+
+  html += `
+    <div class="shell-card full-width">
+      <div class="shell-card-header">
+        <span class="shell-card-icon">📋</span>
+        <span class="shell-card-title">Fleet Summary</span>
+        <span class="shell-badge shell-badge-active">AGGREGATE</span>
+      </div>
+      <div class="shell-card-body">
+        <div style="display:flex;gap:24px;flex-wrap:wrap;">
+          <div>
+            <div class="shell-metric-label">Total Hosts</div>
+            <div class="shell-metric-value">${FLEET_HOSTS.length}</div>
+          </div>
+          <div>
+            <div class="shell-metric-label">Services Healthy</div>
+            <div class="shell-metric-value bio">${allOk}</div>
+          </div>
+          <div>
+            <div class="shell-metric-label">Services Warning</div>
+            <div class="shell-metric-value amber">${allWarn}</div>
+          </div>
+          <div>
+            <div class="shell-metric-label">Services Down</div>
+            <div class="shell-metric-value rust">${allDown}</div>
+          </div>
+          <div>
+            <div class="shell-metric-label">Avg Disk</div>
+            <div class="shell-metric-value">${Math.round(FLEET_HOSTS.reduce((s, h) => s + h.disk_pct, 0) / FLEET_HOSTS.length)}%</div>
+          </div>
+          <div>
+            <div class="shell-metric-label">Total RAM</div>
+            <div class="shell-metric-value">${FLEET_HOSTS.reduce((s, h) => s + h.ram_total, 0)} GB</div>
+          </div>
+        </div>
+      </div>
+      <div class="shell-card-footer">
+        <span class="shell-timestamp">Updated ${timeStr()}</span>
+        <span class="shell-ref">FLT-SUM</span>
+      </div>
+    </div>`;
+
+  grid.innerHTML = html;
+}
+
+// ── Refresh simulation ──────────────────────────────────────────────────────
+
+function refreshFleet() {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.textContent = '↻ Scanning…';
+  document.getElementById('error-banner').style.display = 'none';
+
+  setTimeout(() => {
+    // Simulate slight data variation
+    FLEET_HOSTS.forEach(h => {
+      h.disk_pct = Math.min(98, Math.max(10, h.disk_pct + (Math.random() - 0.5) * 4));
+      h.load = Math.max(0.1, h.load + (Math.random() - 0.5) * 1.2);
+      h.ram_gb = Math.max(0.3, Math.min(h.ram_total, h.ram_gb + (Math.random() - 0.5) * 0.6));
+    });
+    renderFleet();
+    btn.disabled = false;
+    btn.textContent = '↻ Refresh';
+  }, 800);
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Brief loading simulation
+  setTimeout(renderFleet, 600);
+});
+</script>
+</body>
+</html>

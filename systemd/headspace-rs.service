@@ -1,0 +1,20 @@
+[Unit]
+Description=Headspace-RS — Rust-based swarm advisory server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/.openclaw/workspace/headspace-rs
+ExecStart=/home/ubuntu/.openclaw/workspace/headspace-rs/target/release/headspace-rs --port 8800
+Restart=on-failure
+RestartSec=10
+Environment=RUST_BACKTRACE=0
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=headspace-rs
+
+[Install]
+WantedBy=multi-user.target

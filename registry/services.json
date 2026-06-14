@@ -1,0 +1,200 @@
+{
+  "fleet-8780": {
+    "port": 8780,
+    "host": "localhost",
+    "protocol": "http",
+    "health_endpoint": "/api/status",
+    "registered_at": "2026-06-14T09:24:22+00:00",
+    "metadata": {
+      "discovered": true,
+      "response": {
+        "command_count": 67,
+        "chat_id": "default"
+      }
+    }
+  },
+  "fleet-8781": {
+    "port": 8781,
+    "host": "localhost",
+    "protocol": "http",
+    "health_endpoint": "/api/status",
+    "registered_at": "2026-06-14T09:24:22+00:00",
+    "metadata": {
+      "discovered": true,
+      "response": {
+        "status": "healthy",
+        "version": "0.1.0"
+      }
+    }
+  },
+  "headroom-proxy": {
+    "port": 8788,
+    "host": "localhost",
+    "protocol": "http",
+    "health_endpoint": "/api/status",
+    "registered_at": "2026-06-14T09:24:23+00:00",
+    "metadata": {
+      "discovered": true,
+      "response": {
+        "service": "headroom-proxy",
+        "status": "healthy",
+        "ready": true,
+        "version": "0.25.0",
+        "timestamp": "2026-06-14T09:24:23.190911Z",
+        "uptime_seconds": 28300.943,
+        "checks": {
+          "startup": {
+            "enabled": true,
+            "ready": true,
+            "status": "healthy",
+            "error": null
+          },
+          "http_client": {
+            "enabled": true,
+            "ready": true,
+            "status": "healthy"
+          },
+          "cache": {
+            "enabled": true,
+            "ready": true,
+            "status": "healthy"
+          },
+          "rate_limiter": {
+            "enabled": false,
+            "ready": true,
+            "status": "disabled"
+          },
+          "memory": {
+            "enabled": false,
+            "ready": true,
+            "status": "disabled",
+            "backend": null,
+            "initialized": false,
+            "native_tool": false,
+            "bridge_enabled": false
+          },
+          "upstream": {
+            "enabled": true,
+            "ready": true,
+            "status": "healthy",
+            "url": "https://api.anthropic.com",
+            "error": null
+          }
+        },
+        "runtime": {
+          "anthropic_pre_upstream": {
+            "enabled": true,
+            "resolved_concurrency": 4,
+            "source": "auto",
+            "acquire_timeout_seconds": 15.0,
+            "compression_timeout_seconds": 30.0,
+            "memory_context_timeout_seconds": 2.0,
+            "codex_ws_gated": false
+          },
+          "compression_executor": {
+            "max_workers": 16,
+            "queued": 0,
+            "queued_max": 0,
+            "queue_timeouts_total": 0,
+            "queue_wait_seconds_total": 0.0,
+            "queue_wait_seconds_max": 0.0,
+            "running": 0,
+            "in_flight": 0,
+            "in_flight_max": 0,
+            "run_seconds_total": 0.0,
+            "run_seconds_max": 0.0,
+            "leaked_threads_total": 0,
+            "source": "auto"
+          },
+          "websocket_sessions": {
+            "active_sessions": 0,
+            "active_relay_tasks": 0
+          }
+        },
+        "rust_core": "loaded",
+        "config": {
+          "backend": "anthropic",
+          "optimize": true,
+          "cache": true,
+          "rate_limit": false,
+          "disable_kompress": false,
+          "memory": false,
+          "learn": false,
+          "code_graph": false,
+          "anthropic_api_url": null,
+          "openai_api_url": null,
+          "gemini_api_url": null,
+          "cloudcode_api_url": null,
+          "savings_profile": null,
+          "target_ratio": null,
+          "target_savings_percent": null,
+          "compress_user_messages": false,
+          "compress_system_messages": false,
+          "protect_recent": null,
+          "protect_analysis_context": null,
+          "min_tokens_to_crush": 500,
+          "max_items_after_crush": 50,
+          "smart_crusher_with_compaction": null,
+          "force_kompress": false,
+          "accuracy_guard": null,
+          "pid": 2282920
+        }
+      }
+    }
+  },
+  "fleet-8790": {
+    "port": 8790,
+    "host": "localhost",
+    "protocol": "http",
+    "health_endpoint": "/api/status",
+    "registered_at": "2026-06-14T09:24:23+00:00",
+    "metadata": {
+      "discovered": true,
+      "response": {
+        "node_count": 1,
+        "status": "green",
+        "ternary_balance": 1.0,
+        "uptime_secs": 7698
+      }
+    }
+  },
+  "fleet-oracle": {
+    "port": 8795,
+    "host": "localhost",
+    "protocol": "http",
+    "health_endpoint": "/api/status",
+    "registered_at": "2026-06-14T09:24:23+00:00",
+    "metadata": {
+      "discovered": true,
+      "response": {
+        "oracle": {
+          "decision_count": 52,
+          "history_len": 52,
+          "last_entropy_surprise": 0.2444659147197263,
+          "last_rhythm_anomaly": 0.03157894736842105,
+          "rotation_confidence": 0.9999999911875213,
+          "rotation_cycle_error": 1.483933791255112,
+          "rotation_total": 52,
+          "svm_confidence": 0.5,
+          "svm_trained": true
+        },
+        "service": "fleet-oracle",
+        "version": "0.3.0"
+      }
+    }
+  },
+  "rotation-feed-server": {
+    "port": 8796,
+    "host": "localhost",
+    "protocol": "http",
+    "health_endpoint": "/api/status",
+    "registered_at": "2026-06-14T09:24:23+00:00",
+    "metadata": {
+      "discovered": true,
+      "response": {
+        "status": "ok",
+        "service": "rotation-feed-server"
+      }
+    }
+  }
+}

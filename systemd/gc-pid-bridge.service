@@ -1,0 +1,20 @@
+[Unit]
+Description=GC PID Bridge — publishes active fleet PIDs to the event mesh
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/.openclaw/workspace/gc-pid-bridge
+ExecStart=/home/ubuntu/.openclaw/workspace/gc-pid-bridge/target/release/gc-pid-bridge
+Restart=on-failure
+RestartSec=10
+Environment=RUST_BACKTRACE=0
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gc-pid-bridge
+
+[Install]
+WantedBy=multi-user.target
