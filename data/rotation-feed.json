@@ -1,2 +1,15 @@
-{"id": "cb0fd0f8-77cc-4a5b-b641-879faae13f3e", "timestamp": "2026-06-14T09:03:12Z", "rotation_cycle_error": 1.4848796129226685, "rotation_cognitive": -1.0, "rotation_confidence": 1.0, "combined_confidence": 0.8091168768069046, "needs_attention": false, "entropy_surprise": 0.12071488094278372, "rhythm_anomaly": 0.03157894736842105, "svm_prediction": 1.0, "svm_confidence": 0.45, "decision_count": 46, "rotation_total": 46, "disk_pct": 53, "ram_free_mb": 20711, "load": 1.97, "services_active": 37}
-{"id": "965641e3-2a58-4670-9882-c8e1a6fabdd8", "timestamp": "2026-06-14T09:03:46Z", "rotation_cycle_error": 1.4843660593032837, "rotation_cognitive": -1.0, "rotation_confidence": 1.0, "combined_confidence": 0.7825368070422684, "needs_attention": false, "entropy_surprise": 0.3023865407456623, "rhythm_anomaly": 0.03157894736842105, "svm_prediction": 1.0, "svm_confidence": 0.45, "decision_count": 48, "rotation_total": 48, "disk_pct": 54, "ram_free_mb": 20580, "load": 3.3, "services_active": 37}
+{
+  "id": "rotation-construct-001",
+  "timestamp": "2026-06-14T22:52:46Z",
+  "gamma": 634,
+  "eta": 340,
+  "c": 974,
+  "combined_confidence": 0.67,
+  "disk_pct": 63,
+  "ram_free_mb": 21530,
+  "load": 0.04,
+  "services_active": 34,
+  "uptime_seconds": 1124090,
+  "source": "conservation-meter",
+  "status": "healthy"
+}

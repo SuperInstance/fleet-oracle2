@@ -10,7 +10,7 @@ import os
 import socketserver
 from pathlib import Path
 
-PORT = 8796
+PORT = 8799
 SCRIPT_DIR = Path(__file__).parent.resolve()
 FEED_FILE = (SCRIPT_DIR.parent / "data" / "rotation-feed.json").resolve()
 

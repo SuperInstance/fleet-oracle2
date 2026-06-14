@@ -1,6 +1,6 @@
 [Unit]
 Description=Rotation Feed Server — serves rotation-feed.json as JSON with CORS
-After=network.target
+After=network.target harbor-daemon.service
 
 [Service]
 Type=simple
