@@ -1,0 +1,14 @@
+[Unit]
+Description=Meta-Reflex Daemon — self-observation loop
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+ExecStart=/home/ubuntu/.openclaw/workspace/construct/scripts/meta-reflex-daemon.sh
+Restart=on-failure
+RestartSec=10
+PIDFile=/run/meta-reflex-daemon.pid
+
+[Install]
+WantedBy=multi-user.target

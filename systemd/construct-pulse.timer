@@ -1,0 +1,12 @@
+[Unit]
+Description=Construct Pulse — runs construct/scripts/pulse.sh every 15 minutes
+After=network.target
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=15min
+Persistent=true
+Unit=construct-pulse.service
+
+[Install]
+WantedBy=timers.target

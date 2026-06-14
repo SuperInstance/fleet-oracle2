@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet Rotation Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .subtitle { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
+
+  /* ── Grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* ── Metric tiles ── */
+  .metrics-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .metric {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    flex: 1;
+    min-width: 120px;
+  }
+  .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-value { font-size: 22px; font-weight: 700; color: #fff; margin-top: 2px; }
+  .metric-value.ok  { color: var(--green); }
+  .metric-value.warn { color: var(--yellow); }
+  .metric-value.bad  { color: var(--red); }
+
+  /* ── Chart ── */
+  .chart-wrap { position: relative; height: 200px; }
+  canvas { width: 100% !important; height: 100% !important; }
+
+  /* ── Pulse history table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .ts { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .badge-ok   { background: rgba(63,185,80,0.15);  color: var(--green); }
+  .badge-warn { background: rgba(210,153,34,0.15); color: var(--yellow); }
+  .badge-bad  { background: rgba(248,81,73,0.15); color: var(--red); }
+
+  /* ── Oracle status ── */
+  .oracle-status { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot.ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.down { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+  .dot.warn { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+
+  /* ── Refresh button ── */
+  #refresh-btn {
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  #refresh-btn:hover { opacity: 0.85; }
+  #refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .conf-bar-wrap {
+    margin-top: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .conf-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+  .conf-bar.high   { background: var(--green); }
+  .conf-bar.medium { background: var(--yellow); }
+  .conf-bar.low    { background: var(--red); }
+
+  #error-banner {
+    display: none;
+    background: rgba(248,81,73,0.1);
+    border: 1px solid var(--red);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: var(--red);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header-row">
+  <div>
+    <h1>⚙️ Fleet Rotation Dashboard</h1>
+    <div class="subtitle" id="subtitle">Loading…</div>
+  </div>
+  <button id="refresh-btn" onclick="fetchAll()">↻ Refresh</button>
+</div>
+
+<div id="error-banner"></div>
+
+<div class="grid">
+  <!-- ── System metrics ── -->
+  <div class="card">
+    <div class="card-title">System Metrics</div>
+    <div class="metrics-row" id="metrics-row">
+      <div class="metric">
+        <div class="metric-label">Disk Used</div>
+        <div class="metric-value" id="m-disk">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">RAM Free</div>
+        <div class="metric-value" id="m-ram">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Load Avg</div>
+        <div class="metric-value" id="m-load">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Services</div>
+        <div class="metric-value" id="m-services">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Oracle status ── -->
+  <div class="card">
+    <div class="card-title">Fleet Oracle</div>
+    <div class="oracle-status" id="oracle-status">
+      <div class="dot" id="oracle-dot"></div>
+      <span id="oracle-label">Checking…</span>
+    </div>
+    <div style="margin-top:14px;">
+      <div class="metric-label">Combined Confidence</div>
+      <div class="metric-value" id="m-confidence">—</div>
+      <div class="conf-bar-wrap">
+        <div class="conf-bar" id="conf-bar"></div>
+      </div>
+    </div>
+    <div style="margin-top:12px; display:flex; gap:16px; font-size:12px; color:var(--muted);">
+      <span>Decisions: <strong id="m-decisions" style="color:var(--text)">—</strong></span>
+      <span>Rotation total: <strong id="m-rotation-total" style="color:var(--text)">—</strong></span>
+    </div>
+  </div>
+
+  <!-- ── Combined confidence chart ── -->
+  <div class="card" style="grid-column: 1 / -1;">
+    <div class="card-title">Combined Confidence Over Time</div>
+    <div class="chart-wrap">
+      <canvas id="conf-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Pulse history ── -->
+  <div class="card" style="grid-column: 1 / -1;">
+    <div class="card-title">Pulse History</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Combined Conf.</th>
+          <th>Cycle Error</th>
+          <th>Cognitive</th>
+          <th>Entropy</th>
+          <th>Rhythm</th>
+          <th>SVM Pred.</th>
+          <th>Decision#</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="pulse-tbody">
+        <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let feedData = { records: [] };
+let oracleData = null;
+
+// ── Fetch all sources ────────────────────────────────────────────────────────
+async function fetchAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.textContent = '↻ Refreshing…';
+  document.getElementById('error-banner').style.display = 'none';
+
+  try {
+    await Promise.all([fetchOracle(), fetchRotationFeed()]);
+    render();
+  } catch (e) {
+    showError('Failed to fetch data: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↻ Refresh';
+  }
+}
+
+async function fetchOracle() {
+  try {
+    const resp = await fetch('http://localhost:8795/api/status', { signal: AbortSignal.timeout(5000) });
+    if (resp.ok) {
+      oracleData = await resp.json();
+      document.getElementById('oracle-dot').className = 'dot ok';
+      document.getElementById('oracle-label').textContent = 'Oracle is healthy';
+    } else {
+      oracleData = null;
+      document.getElementById('oracle-dot').className = 'dot down';
+      document.getElementById('oracle-label').textContent = 'Oracle returned ' + resp.status;
+    }
+  } catch (_) {
+    oracleData = null;
+    document.getElementById('oracle-dot').className = 'dot down';
+    document.getElementById('oracle-label').textContent = 'Oracle unreachable';
+  }
+}
+
+async function fetchRotationFeed() {
+  const resp = await fetch('http://localhost:8796/api/rotation-feed', { signal: AbortSignal.timeout(5000) });
+  if (!resp.ok) throw new Error('rotation-feed-server returned ' + resp.status);
+  feedData = await resp.json();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  const records = feedData.records || [];
+  const latest = records[records.length - 1] || {};
+  const now = new Date().toISOString();
+
+  document.getElementById('subtitle').textContent =
+    'Last updated: ' + now.replace('T', ' ').substring(0, 19) + ' UTC  |  ' + records.length + ' pulse records';
+
+  // System metrics
+  setMetric('m-disk',     latest.disk_pct !== undefined ? latest.disk_pct + '%' : '—', latest.disk_pct > 80 ? 'bad' : latest.disk_pct > 60 ? 'warn' : 'ok');
+  setMetric('m-ram',      latest.ram_free_mb !== undefined ? latest.ram_free_mb + ' MB' : '—', latest.ram_free_mb < 1000 ? 'bad' : latest.ram_free_mb < 4000 ? 'warn' : 'ok');
+  setMetric('m-load',     latest.load !== undefined ? latest.load : '—', latest.load > 8 ? 'bad' : latest.load > 4 ? 'warn' : 'ok');
+  setMetric('m-services', latest.services_active !== undefined ? latest.services_active : '—', 'ok');
+
+  // Confidence
+  const conf = latest.combined_confidence;
+  if (conf !== undefined && conf !== null) {
+    const pct = (conf * 100).toFixed(1);
+    document.getElementById('m-confidence').textContent = pct + '%';
+    const bar = document.getElementById('conf-bar');
+    bar.style.width = pct + '%';
+    bar.className = 'conf-bar ' + (conf > 0.7 ? 'high' : conf > 0.4 ? 'medium' : 'low');
+  } else {
+    document.getElementById('m-confidence').textContent = '—';
+    document.getElementById('conf-bar').style.width = '0%';
+  }
+
+  document.getElementById('m-decisions').textContent =
+    latest.decision_count !== undefined ? latest.decision_count : '—';
+  document.getElementById('m-rotation-total').textContent =
+    latest.rotation_total !== undefined ? latest.rotation_total : '—';
+
+  // Chart
+  drawChart(records);
+
+  // Pulse history table
+  renderTable(records);
+}
+
+function setMetric(id, value, cls) {
+  const el = document.getElementById(id);
+  el.textContent = value;
+  el.className = 'metric-value ' + (cls || '');
+}
+
+function drawChart(records) {
+  const canvas = document.getElementById('conf-chart');
+  const ctx = canvas.getContext('2d');
+
+  // HiDPI support
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+  const PAD = { top: 16, right: 16, bottom: 32, left: 48 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (!records || records.length === 0) {
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data available', W / 2, H / 2);
+    return;
+  }
+
+  // Extract values
+  const points = records.map(r => r.combined_confidence).filter(v => v !== undefined && v !== null);
+  if (points.length === 0) {
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No confidence data', W / 2, H / 2);
+    return;
+  }
+
+  const minV = 0;
+  const maxV = 1;
+  const range = maxV - minV;
+
+  const toX = (i) => PAD.left + (i / (points.length - 1 || 1)) * chartW;
+  const toY = (v) => PAD.top + (1 - (v - minV) / range) * chartH;
+
+  // Grid lines
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1;
+  for (let v = 0; v <= 1; v += 0.25) {
+    const y = toY(v);
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(W - PAD.right, y);
+    ctx.stroke();
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(v.toFixed(2), PAD.left - 6, y + 4);
+  }
+
+  // Y-axis label
+  ctx.save();
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.translate(12, H / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('combined_confidence', 0, 0);
+  ctx.restore();
+
+  // Draw filled area
+  ctx.beginPath();
+  points.forEach((v, i) => {
+    const x = toX(i);
+    const y = toY(v);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(toX(points.length - 1), PAD.top + chartH);
+  ctx.lineTo(PAD.left, PAD.top + chartH);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + chartH);
+  grad.addColorStop(0, 'rgba(88,166,255,0.25)');
+  grad.addColorStop(1, 'rgba(88,166,255,0.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Draw line
+  ctx.beginPath();
+  points.forEach((v, i) => {
+    const x = toX(i);
+    const y = toY(v);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Draw dots
+  points.forEach((v, i) => {
+    const x = toX(i);
+    const y = toY(v);
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#58a6ff';
+    ctx.fill();
+  });
+
+  // X-axis labels (timestamps)
+  const labelEvery = Math.max(1, Math.floor(points.length / 6));
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  records.forEach((r, i) => {
+    if (i % labelEvery === 0 || i === records.length - 1) {
+      const x = toX(i);
+      const ts = r.timestamp ? r.timestamp.substring(11, 19) : '';
+      ctx.fillText(ts, x, H - 6);
+    }
+  });
+}
+
+function renderTable(records) {
+  const tbody = document.getElementById('pulse-tbody');
+  if (!records || records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">No records</td></tr>';
+    return;
+  }
+
+  // Show newest last
+  const rows = records.slice(-20).reverse();
+  tbody.innerHTML = rows.map(r => {
+    const conf = r.combined_confidence;
+    const confCls = conf > 0.7 ? 'ok' : conf > 0.4 ? 'warn' : 'bad';
+    const badgeCls = r.needs_attention ? 'badge-bad' : 'badge-ok';
+    const badgeTxt = r.needs_attention ? 'ATTENTION' : 'OK';
+    return `<tr>
+      <td class="ts">${r.timestamp ? r.timestamp.replace('T', ' ').substring(0, 19) : '—'}</td>
+      <td><span class="badge badge-${confCls}">${conf != null ? (conf * 100).toFixed(1) + '%' : '—'}</span></td>
+      <td>${r.rotation_cycle_error != null ? r.rotation_cycle_error.toFixed(3) : '—'}</td>
+      <td>${r.rotation_cognitive != null ? r.rotation_cognitive : '—'}</td>
+      <td>${r.entropy_surprise != null ? r.entropy_surprise.toFixed(3) : '—'}</td>
+      <td>${r.rhythm_anomaly != null ? r.rhythm_anomaly.toFixed(3) : '—'}</td>
+      <td>${r.svm_prediction != null ? r.svm_prediction : '—'}</td>
+      <td>${r.decision_count != null ? r.decision_count : '—'}</td>
+      <td><span class="badge ${badgeCls}">${badgeTxt}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  el.textContent = '⚠️ ' + msg;
+  el.style.display = 'block';
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+fetchAll();
+setInterval(fetchAll, 30000); // auto-refresh every 30s
+</script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+[
+  {
+    "name": "disk-crisis",
+    "description": "When gc disk_usage exceeds 85%, aggressively tune PID and query headspace for recent GC patterns",
+    "trigger": {
+      "metric": "disk_usage",
+      "threshold": 85.0,
+      "operator": "gt",
+      "window_seconds": 60,
+      "cooldown_seconds": 120,
+      "context": {
+        "service": "gc-pid-bridge"
+      }
+    },
+    "action": {
+      "endpoint": "http://localhost:8080/tune",
+      "method": "POST",
+      "body_template": {
+        "aggression": 5.0,
+        "target_metric": "disk_usage",
+        "source": "reflex-disk-crisis"
+      },
+      "headers": {
+        "X-Reflex-Source": "disk-crisis",
+        "X-Reflex-Confidence": "0.95"
+      },
+      "timeout_ms": 2000
+    },
+    "secondary_actions": [
+      {
+        "endpoint": "http://localhost:8800/query",
+        "method": "POST",
+        "body_template": {
+          "collection": "gc_patterns",
+          "metric": "disk_usage",
+          "window_seconds": 3600,
+          "top_k": 5
+        },
+        "timeout_ms": 1000
+      }
+    ],
+    "cache_ttl_seconds": 3600,
+    "hit_count": 0,
+    "confidence": 0.95,
+    "learned_from": "oracle-gc-tuning-v3",
+    "tags": ["gc", "disk", "pid-tuning", "critical"],
+    "enabled": true
+  },
+  {
+    "name": "confidence-drop",
+    "description": "When rotation combined_confidence falls below 0.3, fire pulse-webhook.sh for immediate attention",
+    "trigger": {
+      "metric": "combined_confidence",
+      "threshold": 0.3,
+      "operator": "lt",
+      "window_seconds": 300,
+      "cooldown_seconds": 60,
+      "context": {
+        "service": "fleet-oracle",
+        "decision_type": "rotation"
+      }
+    },
+    "action": {
+      "endpoint": "http://localhost:8793/pulse",
+      "method": "POST",
+      "body_template": {
+        "alert": "confidence-drop",
+        "severity": "high",
+        "metric": "combined_confidence",
+        "value": "{{metric_value}}",
+        "threshold": 0.3,
+        "source": "reflex-confidence-drop",
+        "recommendation": "review_rotation_decision"
+      },
+      "headers": {
+        "X-Reflex-Source": "confidence-drop",
+        "X-Alert-Level": "high"
+      },
+      "timeout_ms": 3000
+    },
+    "secondary_actions": [
+      {
+        "description": "Execute pulse-webhook.sh",
+        "type": "script",
+        "path": "/home/ubuntu/.openclaw/workspace/construct/scripts/pulse-webhook.sh",
+        "args": ["--alert", "confidence-drop", "--severity", "high", "--source", "reflex"]
+      }
+    ],
+    "cache_ttl_seconds": 7200,
+    "hit_count": 0,
+    "confidence": 0.88,
+    "learned_from": "oracle-rotation-v2",
+    "tags": ["oracle", "confidence", "rotation", "alert"],
+    "enabled": true
+  },
+  {
+    "name": "high-variance",
+    "description": "When oracle decision variance exceeds 0.8, suggest rotation recalibration",
+    "trigger": {
+      "metric": "decision_variance",
+      "threshold": 0.8,
+      "operator": "gt",
+      "window_seconds": 600,
+      "cooldown_seconds": 300,
+      "context": {
+        "service": "fleet-oracle"
+      }
+    },
+    "action": {
+      "endpoint": "http://localhost:8795/recalibrate",
+      "method": "POST",
+      "body_template": {
+        "recalibration_type": "rotation",
+        "trigger": "high_variance",
+        "variance_value": "{{metric_value}}",
+        "source": "reflex-high-variance"
+      },
+      "headers": {
+        "X-Reflex-Source": "high-variance"
+      },
+      "timeout_ms": 5000
+    },
+    "cache_ttl_seconds": 3600,
+    "hit_count": 0,
+    "confidence": 0.82,
+    "learned_from": "oracle-variance-analysis",
+    "tags": ["oracle", "variance", "recalibration"],
+    "enabled": true
+  },
+  {
+    "name": "service-down",
+    "description": "When any health check fails 3x consecutively, notify fleet-conductor and write baton bottle",
+    "trigger": {
+      "metric": "health_check_failures",
+      "threshold": 3,
+      "operator": "gte",
+      "window_seconds": 120,
+      "cooldown_seconds": 60,
+      "context": {}
+    },
+    "action": {
+      "endpoint": "http://localhost:8793/notify",
+      "method": "POST",
+      "body_template": {
+        "event": "service_down",
+        "severity": "critical",
+        "metric": "health_check_failures",
+        "value": "{{metric_value}}",
+        "target_service": "{{target_service}}",
+        "source": "reflex-service-down"
+      },
+      "headers": {
+        "X-Reflex-Source": "service-down",
+        "X-Alert-Level": "critical"
+      },
+      "timeout_ms": 2000
+    },
+    "secondary_actions": [
+      {
+        "description": "Write baton bottle for service failure",
+        "type": "script",
+        "path": "/home/ubuntu/.openclaw/workspace/baton-system/write-bottle.sh",
+        "args": ["--event", "service-down", "--severity", "critical"]
+      }
+    ],
+    "cache_ttl_seconds": 1800,
+    "hit_count": 0,
+    "confidence": 0.97,
+    "learned_from": "baton-failure-recovery-v1",
+    "tags": ["health", "failure", "baton", "critical"],
+    "enabled": true
+  },
+  {
+    "name": "nebula-latency-spike",
+    "description": "When nebula CF worker latency exceeds 500ms, scale down and alert",
+    "trigger": {
+      "metric": "nebula_latency_ms",
+      "threshold": 500,
+      "operator": "gt",
+      "window_seconds": 30,
+      "cooldown_seconds": 60,
+      "context": {
+        "service": "nebula"
+      }
+    },
+    "action": {
+      "endpoint": "http://localhost:8789/scale",
+      "method": "POST",
+      "body_template": {
+        "action": "scale_down",
+        "reason": "latency_spike",
+        "threshold_ms": 500,
+        "source": "reflex-nebula-latency"
+      },
+      "headers": {
+        "X-Reflex-Source": "nebula-latency-spike"
+      },
+      "timeout_ms": 1000
+    },
+    "cache_ttl_seconds": 3600,
+    "hit_count": 0,
+    "confidence": 0.91,
+    "learned_from": "nebula-perf-tuning",
+    "tags": ["nebula", "latency", "scaling"],
+    "enabled": true
+  },
+  {
+    "name": "gc-pid-oscillation",
+    "description": "When gc PID output oscillates (stddev > 0.3 in 60s window), dampen aggression",
+    "trigger": {
+      "metric": "pid_output_stddev",
+      "threshold": 0.3,
+      "operator": "gt",
+      "window_seconds": 60,
+      "cooldown_seconds": 180,
+      "context": {
+        "service": "gc-pid-bridge"
+      }
+    },
+    "action": {
+      "endpoint": "http://localhost:8080/tune",
+      "method": "POST",
+      "body_template": {
+        "aggression": 0.5,
+        "dampen": true,
+        "target_metric": "pid_oscillation",
+        "source": "reflex-gc-pid-oscillation"
+      },
+      "headers": {
+        "X-Reflex-Source": "gc-pid-oscillation"
+      },
+      "timeout_ms": 2000
+    },
+    "cache_ttl_seconds": 3600,
+    "hit_count": 0,
+    "confidence": 0.85,
+    "learned_from": "gc-pid-stabilization",
+    "tags": ["gc", "pid", "oscillation", "stabilization"],
+    "enabled": true
+  },
+  {
+    "name": "fleet-midi-overload",
+    "description": "When any fleet-midi agent queue depth > 50, redistribute load",
+    "trigger": {
+      "metric": "midi_queue_depth",
+      "threshold": 50,
+      "operator": "gt",
+      "window_seconds": 30,
+      "cooldown_seconds": 120,
+      "context": {
+        "service_pattern": "fleet-midi-*"
+      }
+    },
+    "action": {
+      "endpoint": "http://localhost:8793/load-balance",
+      "method": "POST",
+      "body_template": {
+        "event": "midi_overload",
+        "threshold": 50,
+        "source": "reflex-midi-overload"
+      },
+      "headers": {
+        "X-Reflex-Source": "fleet-midi-overload"
+      },
+      "timeout_ms": 3000
+    },
+    "cache_ttl_seconds": 1800,
+    "hit_count": 0,
+    "confidence": 0.79,
+    "learned_from": "midi-load-balancing",
+    "tags": ["midi", "load-balance", "queue"],
+    "enabled": true
+  },
+  {
+    "name": "headspace-embedding-stale",
+    "description": "When headspace-rs embedding freshness < 0.5, trigger background re-embedding",
+    "trigger": {
+      "metric": "embedding_freshness",
+      "threshold": 0.5,
+      "operator": "lt",
+      "window_seconds": 900,
+      "cooldown_seconds": 600,
+      "context": {
+        "service": "headspace-rs"
+      }
+    },
+    "action": {
+      "endpoint": "http://localhost:8800/reindex",
+      "method": "POST",
+      "body_template": {
+        "collection": "reflex_triggers",
+        "priority": "background",
+        "source": "reflex-headspace-stale"
+      },
+      "headers": {
+        "X-Reflex-Source": "headspace-stale"
+      },
+      "timeout_ms": 10000
+    },
+    "cache_ttl_seconds": 7200,
+    "hit_count": 0,
+    "confidence": 0.76,
+    "learned_from": "headspace-maintenance",
+    "tags": ["headspace", "embedding", "maintenance"],
+    "enabled": true
+  }
+]

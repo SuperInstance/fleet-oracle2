@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet Reflex Status</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --orange: #f0883e;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
+
+  /* ── Filter tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+  .tab {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    user-select: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab .count {
+    display: inline-block;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 0 6px;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+
+  /* ── Reflex cards ── */
+  .reflex-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+
+  .reflex-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    transition: border-color 0.2s;
+  }
+  .reflex-card:hover { border-color: #484f58; }
+
+  .reflex-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .reflex-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .reflex-id {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    margin-top: 2px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-ok       { background: rgba(63,185,80,0.15);  color: var(--green); }
+  .badge-warn     { background: rgba(210,153,34,0.15); color: var(--yellow); }
+  .badge-error    { background: rgba(248,81,73,0.15);  color: var(--red); }
+  .badge-active   { background: rgba(88,166,255,0.15); color: var(--blue); }
+  .badge-idle     { background: rgba(139,148,158,0.15); color: var(--muted); }
+  .badge-unknown  { background: rgba(188,140,255,0.15);color: var(--purple); }
+
+  .reflex-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 16px;
+    margin-top: 10px;
+    font-size: 12px;
+  }
+  .meta-item { display: flex; flex-direction: column; }
+  .meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .meta-value { color: var(--text); font-weight: 500; }
+  .meta-value.highlight { color: var(--blue); }
+
+  .reflex-desc {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* ── Status bar ── */
+  .status-bar {
+    display: flex;
+    gap: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  .status-item { display: flex; align-items: center; gap: 6px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .status-dot.green { background: var(--green); }
+  .status-dot.yellow { background: var(--yellow); }
+  .status-dot.red { background: var(--red); }
+  .status-dot.purple { background: var(--purple); }
+  .status-count { font-weight: 700; color: #fff; }
+
+  /* ── Health sparkline ── */
+  .sparkline {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 24px;
+    margin-top: 8px;
+  }
+  .spark-bar {
+    flex: 1;
+    border-radius: 2px 2px 0 0;
+    min-width: 4px;
+    background: var(--blue);
+    opacity: 0.7;
+  }
+  .spark-bar.good { background: var(--green); }
+  .spark-bar.warn { background: var(--yellow); }
+  .spark-bar.bad  { background: var(--red); }
+</style>
+</head>
+<body>
+
+<h1>🧠 Fleet Reflex Status</h1>
+<div class="subtitle">Nebula worker reflex registry — real-time reflex health overview</div>
+
+<!-- ── Status summary bar ── -->
+<div class="status-bar">
+  <div class="status-item">
+    <div class="status-dot green"></div>
+    <span class="status-count" id="count-active">—</span>
+    <span>Active</span>
+  </div>
+  <div class="status-item">
+    <div class="status-dot yellow"></div>
+    <span class="status-count" id="count-idle">—</span>
+    <span>Idle</span>
+  </div>
+  <div class="status-item">
+    <div class="status-dot red"></div>
+    <span class="status-count" id="count-error">—</span>
+    <span>Error</span>
+  </div>
+  <div class="status-item">
+    <div class="status-dot purple"></div>
+    <span class="status-count" id="count-unknown">—</span>
+    <span>Unknown</span>
+  </div>
+  <div style="margin-left:auto; color:var(--muted); font-size:12px;">
+    Last scan: <span id="last-scan">—</span>
+  </div>
+</div>
+
+<!-- ── Filter tabs ── -->
+<div class="tabs">
+  <div class="tab active" data-filter="all">All <span class="count" id="tab-all">—</span></div>
+  <div class="tab" data-filter="active">Active <span class="count" id="tab-active">—</span></div>
+  <div class="tab" data-filter="idle">Idle <span class="count" id="tab-idle">—</span></div>
+  <div class="tab" data-filter="error">Error <span class="count" id="tab-error">—</span></div>
+</div>
+
+<!-- ── Reflex cards grid ── -->
+<div class="reflex-grid" id="reflex-grid">
+  <div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px;">Loading reflex registry…</div>
+</div>
+
+<script>
+// ── Mock reflex data ─────────────────────────────────────────────────────────
+const REFLEXES = [
+  {
+    id: 'reflex-001',
+    name: 'circuit-breaker-v1',
+    status: 'active',
+    health: 0.98,
+    latency_ms: 12,
+    hit_count: 4832,
+    last_trigger: '2026-06-14T09:03:00Z',
+    cooldown_s: 30,
+    description: 'Trips when error rate exceeds 5% within a 60s rolling window. Resets after 30s cooldown.',
+    tags: ['protection', 'circuit-breaker', 'v1'],
+  },
+  {
+    id: 'reflex-002',
+    name: 'gc-predictive-trigger',
+    status: 'active',
+    health: 0.91,
+    latency_ms: 34,
+    hit_count: 1284,
+    last_trigger: '2026-06-14T08:47:00Z',
+    cooldown_s: 300,
+    description: 'Predicts GC pressure 5 minutes ahead using the ternary advisor. Triggers anticipatory collection.',
+    tags: ['gc', 'predictive', 'memory'],
+  },
+  {
+    id: 'reflex-003',
+    name: 'load-balancer-redirect',
+    status: 'active',
+    health: 0.87,
+    latency_ms: 8,
+    hit_count: 9201,
+    last_trigger: '2026-06-14T09:04:00Z',
+    cooldown_s: 5,
+    description: 'Redirects traffic away from overloaded fleet-midi agents when load exceeds threshold.',
+    tags: ['routing', 'load-balancer'],
+  },
+  {
+    id: 'reflex-004',
+    name: 'entropy-surprise-detector',
+    status: 'idle',
+    health: 0.76,
+    latency_ms: 22,
+    hit_count: 412,
+    last_trigger: '2026-06-14T07:22:00Z',
+    cooldown_s: 600,
+    description: 'Activates when system entropy exceeds expected rhythm anomaly threshold. Rare trigger.',
+    tags: ['anomaly', 'entropy', 'rhythm'],
+  },
+  {
+    id: 'reflex-005',
+    name: 'oracle-fallback-route',
+    status: 'active',
+    health: 0.95,
+    latency_ms: 5,
+    hit_count: 231,
+    last_trigger: '2026-06-14T06:11:00Z',
+    cooldown_s: 120,
+    description: 'Routes decisions to secondary oracle when primary fleet-oracle is unreachable or returns 5xx.',
+    tags: ['failover', 'oracle', 'routing'],
+  },
+  {
+    id: 'reflex-006',
+    name: 'disk-pressure-escalation',
+    status: 'idle',
+    health: 0.82,
+    latency_ms: 15,
+    hit_count: 89,
+    last_trigger: '2026-06-13T22:00:00Z',
+    cooldown_s: 3600,
+    description: 'Escalates disk pressure alert when usage exceeds 85% and is growing faster than 1%/hour.',
+    tags: ['disk', 'pressure', 'escalation'],
+  },
+  {
+    id: 'reflex-007',
+    name: 'reflex-dedup-suppressor',
+    status: 'active',
+    health: 0.99,
+    latency_ms: 3,
+    hit_count: 34401,
+    last_trigger: '2026-06-14T09:04:30Z',
+    cooldown_s: 1,
+    description: 'Deduplicates rapid-fire reflex triggers within a 1s window to prevent cascade loops.',
+    tags: ['dedup', 'cascade', 'suppression'],
+  },
+  {
+    id: 'reflex-008',
+    name: 'svm-confidence-gate',
+    status: 'active',
+    health: 0.88,
+    latency_ms: 19,
+    hit_count: 674,
+    last_trigger: '2026-06-14T08:55:00Z',
+    cooldown_s: 60,
+    description: 'Blocks oracle decisions when SVM confidence drops below 0.4, forcing exploration mode.',
+    tags: ['svm', 'confidence', 'gate'],
+  },
+  {
+    id: 'reflex-009',
+    name: 'midi-agent-restart',
+    status: 'error',
+    health: 0.10,
+    latency_ms: 0,
+    hit_count: 3,
+    last_trigger: '2026-06-14T09:01:00Z',
+    cooldown_s: 60,
+    description: 'Attempts to restart a fleet-midi agent that has become unresponsive. Has a 3-retry limit.',
+    tags: ['restart', 'midi', 'recovery'],
+  },
+  {
+    id: 'reflex-010',
+    name: 'rotation-cycle-guard',
+    status: 'active',
+    health: 0.93,
+    latency_ms: 11,
+    hit_count: 1892,
+    last_trigger: '2026-06-14T09:03:46Z',
+    cooldown_s: 15,
+    description: 'Monitors rotation cycle error and blocks new rotation if error exceeds 2.0 standard deviations.',
+    tags: ['rotation', 'guard', 'cycle'],
+  },
+  {
+    id: 'reflex-011',
+    name: 'fleet-event-bus-drain',
+    status: 'idle',
+    health: 0.65,
+    latency_ms: 45,
+    hit_count: 67,
+    last_trigger: '2026-06-12T14:30:00Z',
+    cooldown_s: 1800,
+    description: 'Drains fleet-event backlog when queue depth exceeds 10k messages to prevent event starvation.',
+    tags: ['event-bus', 'drain', 'backpressure'],
+  },
+  {
+    id: 'reflex-012',
+    name: 'ternary-retreat-enforce',
+    status: 'active',
+    health: 0.84,
+    latency_ms: 7,
+    hit_count: 412,
+    last_trigger: '2026-06-14T08:30:00Z',
+    cooldown_s: 45,
+    description: 'Forces ternary retreat mode when host load exceeds 8.0, halting non-critical fleet operations.',
+    tags: ['ternary', 'retreat', 'load'],
+  },
+];
+
+// ── Render ─────────────────────────────────────────────────────────────────
+let currentFilter = 'all';
+
+function healthClass(h) {
+  if (h >= 0.9) return 'good';
+  if (h >= 0.6) return 'warn';
+  return 'bad';
+}
+
+function sparklineBars(historical) {
+  if (!historical || historical.length === 0) return '';
+  return historical.map(h => {
+    const cls = healthClass(h);
+    return `<div class="spark-bar ${cls}" style="height:${Math.round(h * 100)}%"></div>`;
+  }).join('');
+}
+
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const diff = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (diff < 60) return Math.round(diff) + 's ago';
+  if (diff < 3600) return Math.round(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.round(diff / 3600) + 'h ago';
+  return Math.round(diff / 86400) + 'd ago';
+}
+
+function badgeForStatus(status) {
+  const map = {
+    active: ['badge-active', 'ACTIVE'],
+    idle:   ['badge-idle',   'IDLE'],
+    error:  ['badge-error',  'ERROR'],
+    unknown:['badge-unknown','UNKNOWN'],
+  };
+  const [cls, txt] = map[status] || map.unknown;
+  return `<span class="badge ${cls}">${txt}</span>`;
+}
+
+function renderReflexes(filter) {
+  const grid = document.getElementById('reflex-grid');
+  const filtered = filter === 'all' ? REFLEXES : REFLEXES.filter(r => r.status === filter);
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px;">No reflexes match this filter.</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(r => `
+    <div class="reflex-card">
+      <div class="reflex-header">
+        <div>
+          <div class="reflex-name">${r.name}</div>
+          <div class="reflex-id">${r.id}</div>
+        </div>
+        ${badgeForStatus(r.status)}
+      </div>
+      <div class="reflex-desc">${r.description}</div>
+      <div class="reflex-meta">
+        <div class="meta-item">
+          <span class="meta-label">Health</span>
+          <span class="meta-value highlight">${(r.health * 100).toFixed(0)}%</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Latency</span>
+          <span class="meta-value">${r.latency_ms}ms</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Hit Count</span>
+          <span class="meta-value">${r.hit_count.toLocaleString()}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Last Trigger</span>
+          <span class="meta-value">${timeAgo(r.last_trigger)}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Cooldown</span>
+          <span class="meta-value">${r.cooldown_s}s</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Tags</span>
+          <span class="meta-value" style="font-size:10px;color:var(--purple);">${r.tags.join(', ')}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateCounts() {
+  const byStatus = (s) => REFLEXES.filter(r => r.status === s).length;
+  document.getElementById('count-active').textContent = byStatus('active');
+  document.getElementById('count-idle').textContent   = byStatus('idle');
+  document.getElementById('count-error').textContent  = byStatus('error');
+  document.getElementById('count-unknown').textContent = byStatus('unknown');
+
+  document.getElementById('tab-all').textContent    = REFLEXES.length;
+  document.getElementById('tab-active').textContent  = byStatus('active');
+  document.getElementById('tab-idle').textContent    = byStatus('idle');
+  document.getElementById('tab-error').textContent  = byStatus('error');
+
+  document.getElementById('last-scan').textContent = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+}
+
+// ── Tab handling ────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentFilter = tab.dataset.filter;
+    renderReflexes(currentFilter);
+  });
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+updateCounts();
+renderReflexes('all');
+</script>
+</body>
+</html>

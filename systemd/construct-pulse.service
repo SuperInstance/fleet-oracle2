@@ -1,0 +1,34 @@
+[Unit]
+Description=Construct Pulse — metric collection, oracle query, fleet-log + fleet-event write
+After=network.target
+Wants=fleet-oracle.service fleet-log.service fleet-event.service
+
+# Allow this service to fail gracefully if upstream services are restarting
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+ExecStart=/home/ubuntu/.openclaw/workspace/construct/scripts/pulse.sh
+# Run as the ubuntu user so it can write to workspace
+User=ubuntu
+Group=ubuntu
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/.openclaw/workspace/construct/data
+
+# Environment
+Environment="RUST_BACKTRACE=0"
+
+# Logging — journalctl -u construct-pulse.service -f
+StandardOutput=journal
+StandardError=journal
+
+# Timeout slightly less than the timer interval so we don't pile up
+TimeoutSec=600
+
+[Install]
+WantedBy=multi-user.target

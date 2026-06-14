@@ -1,0 +1,20 @@
+[Unit]
+Description=Construct Pulse Webhook — fires on significant rotation events (confidence thresholds)
+After=network.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+ExecStart=/bin/bash /home/ubuntu/.openclaw/workspace/construct/scripts/pulse-webhook.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=construct-pulse-webhook
+SuccessExitStatus=0 1
+
+# Restart on failure for resilience
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

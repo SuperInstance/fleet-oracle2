@@ -1,0 +1,8 @@
+[Unit]
+Description=Fleet Self-Test — daily health validation
+After=network.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/.openclaw/workspace/construct/scripts/self-test.sh
