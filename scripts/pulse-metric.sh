@@ -269,7 +269,12 @@ main() {
   bash "${SCRIPT_DIR}/pulse-anomaly.sh" || warn "anomaly detection failed; continuing"
 
   # Step 8: Self-tuning feedback loop (adjust GC setpoint based on system stress)
+  log "Running self-tuning feedback loop..."
   "${SCRIPT_DIR}/pulse-self-tune.sh" || warn "self-tune loop failed; continuing"
+
+  # Step 9: Auto-evict — if setpoint dropped into critical zone, trigger GC eviction
+  log "Checking GC auto-evict trigger..."
+  bash "${SCRIPT_DIR}/gc-auto-evict.sh" || warn "gc-auto-evict failed; continuing"
 
   log "=== Pulse Metric ${pulse_id} complete ==="
 }
