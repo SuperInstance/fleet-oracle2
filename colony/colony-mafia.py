@@ -330,7 +330,7 @@ class MafiaGame:
 
         if not alive_mafia:
             return 'town'  # All mafia eliminated
-        if alive_mafia >= alive_town:
+        if len(alive_mafia) >= len(alive_town):
             return 'mafia'  # Mafia equals or outnumbers town
         return None
 
