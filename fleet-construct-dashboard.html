@@ -78,6 +78,19 @@
       <div class="val" id="gc-aggression">—</div>
       <div class="sub" id="gc-detail">Aggression multiplier</div>
     </div>
+    <div class="card" id="card-games">
+      <h3>🎲 Colony Games</h3>
+      <div style="font-size:0.9em">
+        <div class="metric-row"><span>🎮 Prisoner's Colloquium</span><span id="games-pd">—</span></div>
+        <div class="metric-row"><span>🤝 Trust Auction</span><span id="games-auction">—</span></div>
+        <div class="metric-row"><span>💚 Empathy Loop</span><span id="games-gift">—</span></div>
+        <div class="metric-row"><span>🕵️ Deception Arena</span><span id="games-deception">—</span></div>
+        <div class="metric-row"><span>🧬 Darwin's Arena</span><span id="games-darwin">—</span></div>
+        <div class="metric-row"><span>👑 Diplomacy</span><span id="games-diplomacy">—</span></div>
+        <div class="metric-row"><span>📊 Fitness Engine</span><span id="games-fitness">—</span></div>
+      </div>
+      <div class="sub" style="margin-top:8px">13 cells · 6 games + fitness</div>
+    </div>
     <div class="card" id="card-cf">
       <h3>☁️ Cloudflare</h3>
       <div style="font-size:0.9em">
@@ -170,6 +183,48 @@ async function refresh() {
     }
   } catch(e) {
     document.querySelectorAll('#conservation-detail .val').forEach(el => el.textContent = '✕');
+  }
+
+  // Colony Games
+  try {
+    const gs = await fetch('http://localhost:8823/games/status').then(r => r.json());
+    document.getElementById('games-pd').textContent = gs.pd_total_rounds + ' rounds';
+    document.getElementById('games-auction').textContent = gs.auctions_total + ' auctions';
+    document.getElementById('games-gift').textContent = gs.gifts_total + ' gifts';
+    document.getElementById('games-pd').style.color = gs.pd_total_rounds > 0 ? COLORS.green : '#888';
+  } catch(e) {
+    document.querySelectorAll('[id^="games-"]').forEach(el => el.textContent = '✕');
+  }
+  try {
+    const ds = await fetch('http://localhost:8823/game/deception/status').then(r => r.json());
+    document.getElementById('games-deception').textContent = ds.total_claims + ' claims';
+    document.getElementById('games-deception').style.color = ds.total_claims > 0 ? COLORS.green : '#888';
+  } catch(e) {
+    document.getElementById('games-deception').textContent = '✕';
+  }
+  try {
+    const drs = await fetch('http://localhost:8823/game/darwin/status').then(r => r.json());
+    const gen = drs.generation || 0;
+    document.getElementById('games-darwin').textContent = 'gen ' + gen + ' · ' + (drs.population_size||0) + ' pop';
+    document.getElementById('games-darwin').style.color = gen > 0 ? COLORS.green : '#888';
+  } catch(e) {
+    document.getElementById('games-darwin').textContent = '✕';
+  }
+  try {
+    const dps = await fetch('http://localhost:8823/game/diplomacy/status').then(r => r.json());
+    document.getElementById('games-diplomacy').textContent = (dps.active_pacts||0) + ' pacts · ' + (dps.total_betrayals||0) + ' betrayals';
+    document.getElementById('games-diplomacy').style.color = dps.total_pacts > 0 ? COLORS.green : '#888';
+  } catch(e) {
+    document.getElementById('games-diplomacy').textContent = '✕';
+  }
+  try {
+    const fs = await fetch('http://localhost:8823/fitness/status').then(r => r.json());
+    const lc = Object.keys(fs.learning_curves||{}).length;
+    const div = Object.keys(fs.diversification||{}).length;
+    const disc = Object.keys(fs.discovery||{}).length;
+    document.getElementById('games-fitness').textContent = lc + ' curves · ' + div + ' div · ' + disc + ' disc';
+  } catch(e) {
+    document.getElementById('games-fitness').textContent = '✕';
   }
 
   // Rotation Feed
