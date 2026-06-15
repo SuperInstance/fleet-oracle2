@@ -264,6 +264,10 @@ main() {
   log "Checking pulse-webhook thresholds..."
   bash "${SCRIPT_DIR}/pulse-webhook.sh" || warn "pulse-webhook check failed; continuing"
 
+  # Step 7.5: Anomaly detection via headspace-rs
+  log "Running anomaly detection..."
+  bash "${SCRIPT_DIR}/pulse-anomaly.sh" || warn "anomaly detection failed; continuing"
+
   # Step 8: Self-tuning feedback loop (adjust GC setpoint based on system stress)
   "${SCRIPT_DIR}/pulse-self-tune.sh" || warn "self-tune loop failed; continuing"
 
