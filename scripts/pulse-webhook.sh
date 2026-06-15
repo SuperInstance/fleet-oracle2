@@ -1,88 +1,213 @@
 #!/usr/bin/env bash
 #
-# pulse-webhook.sh — Fires on significant rotation events.
-#   - combined_confidence drops below 0.3  → warning alert to fleet-event
-#   - combined_confidence jumps above 0.8  → celebration info entry to fleet-event
+# pulse-webhook.sh — Monitor conservation-meter ratio and fire alert bottles.
+#
+# Queries the conservation-meter at :8798/api/status and evaluates the
+# γ/η ratio against configurable thresholds:
+#
+#   ratio <  3.0  → green (no alert)
+#   ratio >= 3.0  → WARNING bottle to harbor-daemon
+#   ratio >= 5.0  → ALARM bottle to harbor-daemon
+#   burn_detected → BURN_ALERT bottle
+#   confidence < 0.3 (from rotation-feed) → LOW_CONFIDENCE bottle
+#
+# Bottles are sent as newline-terminated JSON over TCP to the harbor
+# daemon on port 8796.  All activity is logged to PULSE_WEBHOOK_LOG.
 #
 set -euo pipefail
 
-FEEDFILE="/home/ubuntu/.openclaw/workspace/construct/data/rotation-feed.json"
-FLEET_EVENT_URL="http://localhost:8782/api/event"
-LOGFILE="/tmp/construct-pulse-webhook.log"
-THRESHOLD_LOW=0.3
-THRESHOLD_HIGH=0.8
+# ── Configuration ──────────────────────────────────────────────────────────────
+CONSERVATION_URL="${CONSERVATION_URL:-http://localhost:8798/api/status}"
+HARBOR_HOST="${HARBOR_HOST:-127.0.0.1}"
+HARBOR_PORT="${HARBOR_PORT:-8796}"
+PULSE_WEBHOOK_LOG="${PULSE_WEBHOOK_LOG:-/tmp/pulse-webhook.log}"
 
-log() {
-    echo "[$(date -Iseconds)] $*" >> "$LOGFILE"
+RATIO_WARN="${RATIO_WARN:-3.0}"
+RATIO_CRIT="${RATIO_CRIT:-5.0}"
+CONFIDENCE_LOW="${CONFIDENCE_LOW:-0.3}"
+BOTTLE_TTL_HOURS="${BOTTLE_TTL_HOURS:-1}"
+
+# Rotation feed (for confidence extraction)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONSTRUCT_DIR="$(dirname "$SCRIPT_DIR")"
+ROTATION_FEED="${CONSTRUCT_DIR}/data/rotation-feed.json"
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+uuid()    { cat /proc/sys/kernel/random/uuid 2>/dev/null || python3 -c "import uuid; print(uuid.uuid4())"; }
+
+log() { echo "[$(now_iso)] [pulse-webhook] $*" >> "$PULSE_WEBHOOK_LOG"; }
+
+# ── Fetch conservation-meter status ───────────────────────────────────────────
+fetch_status() {
+  curl -sf --max-time 10 "$CONSERVATION_URL" 2>/dev/null
 }
 
-# ── Load latest entry ─────────────────────────────────────────────────────────
-if [[ ! -f "$FEEDFILE" ]]; then
-    log "ERROR: rotation-feed.json not found"
-    exit 1
-fi
+# ── Send a single bottle to harbor-daemon over TCP ────────────────────────────
+# Bottle format matches harbor-daemon's expected Bottle struct.
+send_harbor_bottle() {
+  local alert_type="$1"   # e.g. RATIO_WARNING, RATIO_ALARM, BURN_ALERT, LOW_CONFIDENCE
+  local alert_body="$2"   # human/machine-readable summary
+  local priority="$3"     # 1-5
 
-latest_entry=$(tail -1 "$FEEDFILE")
+  local bottle_id
+  bottle_id=$(uuid)
+  local ts
+  ts=$(now_iso)
 
-# ── Extract combined_confidence ───────────────────────────────────────────────
-confidence=$(echo "$latest_entry" | python3 -c '
+  # Compute expiry
+  local expires_at
+  expires_at=$(python3 -c "
+from datetime import datetime, timedelta, timezone
+now = datetime.now(timezone.utc)
+exp = now + timedelta(hours=${BOTTLE_TTL_HOURS})
+print(exp.strftime('%Y-%m-%dT%H:%M:%SZ'))
+")
+
+  # Build bottle JSON — must contain the fields harbor-daemon expects:
+  # uuid, sender, recipient, priority, type, payload, expires_at, hop_count
+  local bottle
+  bottle=$(python3 -c "
+import json
+b = {
+    'uuid': '${bottle_id}',
+    'type': '${alert_type}',
+    'sender': 'pulse-webhook',
+    'recipient': 'construct-fleet',
+    'priority': ${priority},
+    'payload': json.dumps({
+        'alert': '${alert_type}',
+        'body': '${alert_body}',
+        'timestamp': '${ts}',
+        'source': 'pulse-webhook'
+    }),
+    'expires_at': '${expires_at}',
+    'hop_count': 0
+}
+print(json.dumps(b))
+")
+
+  # Send over TCP and read the response
+  local resp
+  resp=$(echo "$bottle" | nc -q 2 "$HARBOR_HOST" "$HARBOR_PORT" 2>/dev/null) || {
+    log "ERROR: nc send to harbor-daemon failed"
+    return 1
+  }
+
+  local harbor_status
+  harbor_status=$(echo "$resp" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('status','?'))" 2>/dev/null || echo "parse_error")
+
+  if [[ "$harbor_status" == "ok" ]]; then
+    log "BOTTLE SENT: ${alert_type} | id=${bottle_id} | ${alert_body} | harbor=${harbor_status}"
+    return 0
+  else
+    local harbor_msg
+    harbor_msg=$(echo "$resp" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('message','?'))" 2>/dev/null || echo "$resp")
+    log "ERROR: Harbor rejected bottle ${bottle_id}: ${harbor_status} — ${harbor_msg}"
+    return 1
+  fi
+}
+
+# ── Extract latest combined_confidence from rotation-feed ─────────────────────
+get_latest_confidence() {
+  if [[ ! -f "$ROTATION_FEED" ]]; then
+    echo "null"
+    return
+  fi
+
+  python3 -c "
 import json, sys
-d = json.load(sys.stdin)
-print(d.get("combined_confidence", "null"))
-' 2>/dev/null)
-
-if [[ "$confidence" == "null" || -z "$confidence" ]]; then
-    log "ERROR: could not parse combined_confidence from feed entry"
-    exit 1
-fi
-
-log "Parsed confidence: $confidence"
-
-# ── Fire webhook based on threshold ───────────────────────────────────────────
-if (( $(echo "$confidence < $THRESHOLD_LOW" | bc -l) )); then
-    log "Confidence below $THRESHOLD_LOW — posting WARNING event"
-
-    event_payload=$(echo "$latest_entry" | python3 -c "
-import json, sys, uuid
-d = json.load(sys.stdin)
-event = {
-    \"id\": str(uuid.uuid4()),
-    \"topic\": \"rotation_alert\",
-    \"severity\": \"alert\",
-    \"message\": \"Rotation confidence dropped below ${THRESHOLD_LOW}: ${confidence}\",
-    \"payload\": d
+try:
+    with open('${ROTATION_FEED}', 'r') as f:
+        lines = f.readlines()
+    if not lines:
+        print('null')
+        sys.exit(0)
+    last = json.loads(lines[-1].strip())
+    print(last.get('combined_confidence', 'null'))
+except Exception:
+    print('null')
+" 2>/dev/null
 }
-print(json.dumps(event))
+
+# ── Main evaluation ───────────────────────────────────────────────────────────
+main() {
+  log "=== pulse-webhook check ==="
+
+  # 1. Fetch conservation-meter status
+  local status_json
+  status_json=$(fetch_status) || {
+    log "ERROR: Failed to fetch ${CONSERVATION_URL}"
+    return 1
+  }
+
+  # 2. Extract key fields
+  local ratio burn_detected
+  ratio=$(echo "$status_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('ratio','null'))" 2>/dev/null || echo "null")
+  burn_detected=$(echo "$status_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('burn_detected','null'))" 2>/dev/null || echo "null")
+
+  if [[ "$ratio" == "null" ]]; then
+    log "ERROR: Could not parse ratio from conservation-meter response"
+    return 1
+  fi
+
+  local current_c
+  current_c=$(echo "$status_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('current_c','?'))" 2>/dev/null || echo "?")
+
+  log "Conservation status: ratio=${ratio}, C=${current_c}, burn_detected=${burn_detected}"
+
+  # 3. Priority: burn_detected → ALARM first
+  if [[ "$burn_detected" == "true" ]]; then
+    log "BURN DETECTED — firing BURN_ALERT bottle"
+    send_harbor_bottle "BURN_ALERT" "burn_detected=true ratio=${ratio} C=${current_c}" 5 || true
+    # Don't return — also check ratio thresholds
+  fi
+
+  # 4. Ratio thresholds (use python for float comparison)
+  local alert_level
+  alert_level=$(python3 -c "
+ratio = float('${ratio}')
+warn = float('${RATIO_WARN}')
+crit = float('${RATIO_CRIT}')
+if ratio >= crit:
+    print('ALARM')
+elif ratio >= warn:
+    print('WARNING')
+else:
+    print('OK')
 ")
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-        -X POST "$FLEET_EVENT_URL" \
-        -H "Content-Type: application/json" \
-        -d "$event_payload" \
-        --max-time 10 2>/dev/null || echo "000")
-    log "POST alert result: HTTP $http_code"
 
-elif (( $(echo "$confidence > $THRESHOLD_HIGH" | bc -l) )); then
-    log "Confidence above $THRESHOLD_HIGH — posting CELEBRATION event"
+  case "$alert_level" in
+    ALARM)
+      log "Ratio ${ratio} >= ${RATIO_CRIT} — firing RATIO_ALARM bottle"
+      send_harbor_bottle "RATIO_ALARM" "ratio=${ratio} C=${current_c} threshold=${RATIO_CRIT}" 5 || true
+      ;;
+    WARNING)
+      log "Ratio ${ratio} >= ${RATIO_WARN} — firing RATIO_WARNING bottle"
+      send_harbor_bottle "RATIO_WARNING" "ratio=${ratio} C=${current_c} threshold=${RATIO_WARN}" 3 || true
+      ;;
+    *)
+      log "Ratio ${ratio} < ${RATIO_WARN} — nominal (green)"
+      ;;
+  esac
 
-    event_payload=$(echo "$latest_entry" | python3 -c "
-import json, sys, uuid
-d = json.load(sys.stdin)
-event = {
-    \"id\": str(uuid.uuid4()),
-    \"topic\": \"rotation_celebration\",
-    \"severity\": \"info\",
-    \"message\": \"Rotation confidence jumped above ${THRESHOLD_HIGH}: ${confidence}\",
-    \"payload\": d
+  # 5. Confidence check (from rotation-feed, not conservation-meter)
+  local confidence
+  confidence=$(get_latest_confidence)
+  if [[ "$confidence" != "null" ]]; then
+    local conf_low
+    conf_low=$(python3 -c "
+conf = float('${confidence}')
+low = float('${CONFIDENCE_LOW}')
+print('true' if conf < low else 'false')
+")
+    if [[ "$conf_low" == "true" ]]; then
+      log "Confidence ${confidence} < ${CONFIDENCE_LOW} — firing LOW_CONFIDENCE bottle"
+      send_harbor_bottle "LOW_CONFIDENCE" "combined_confidence=${confidence} threshold=${CONFIDENCE_LOW}" 4 || true
+    fi
+  fi
+
+  log "=== pulse-webhook check complete ==="
 }
-print(json.dumps(event))
-")
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-        -X POST "$FLEET_EVENT_URL" \
-        -H "Content-Type: application/json" \
-        -d "$event_payload" \
-        --max-time 10 2>/dev/null || echo "000")
-    log "POST celebration result: HTTP $http_code"
 
-else
-    log "Confidence $confidence — no webhook trigger (thresholds: low=${THRESHOLD_LOW}, high=${THRESHOLD_HIGH})"
-fi
+main "$@"

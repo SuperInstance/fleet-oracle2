@@ -256,6 +256,24 @@ main() {
   log "Sending bottle to harbor-daemon..."
   send_harbor_bottle "$pulse_id" "$ts" "$gamma" "$eta" "$metrics" || true
 
+  # Step 6: Embed in headspace-rs
+  log "Embedding pulse into headspace-rs..."
+  bash "${SCRIPT_DIR}/pulse-embed.sh" || warn "headspace-rs embed failed; continuing"
+
+  # Step 7: Fire pulse-webhook (ratio/confidence threshold alerts)
+  log "Checking pulse-webhook thresholds..."
+  bash "${SCRIPT_DIR}/pulse-webhook.sh" || warn "pulse-webhook check failed; continuing"
+
+  # Step 8: Self-tuning notice — if GC aggression > 4.0, flag for attention
+  local disk_pct_hook
+  disk_pct_hook=$(collect_metrics 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('disk_pct',63))" 2>/dev/null || echo 63)
+  local used_pct=$((100 - disk_pct_hook))
+  local aggression_hook
+  aggression_hook=$(/usr/local/bin/gc-pid-bridge "$used_pct" 2>/dev/null || echo "2.0")
+  if (( $(echo "$aggression_hook > 4.0" | bc -l 2>/dev/null || echo 0) )); then
+    log "NOTICE: GC aggression ${aggression_hook}x — high disk pressure. Consider tuning."
+  fi
+
   log "=== Pulse Metric ${pulse_id} complete ==="
 }
 
