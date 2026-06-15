@@ -1,0 +1,92 @@
+[
+  {
+    "config": {
+      "target_cpu": "cortex-a76",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 400,
+      "loop_unrolling": true,
+      "prefetch": false,
+      "target_feature": "+neon,+fp16"
+    },
+    "benchmark": {
+      "avg_ms": 6.097722053527832,
+      "min_ms": 5.769014358520508,
+      "max_ms": 6.590843200683594,
+      "samples": 10
+    }
+  },
+  {
+    "config": {
+      "target_cpu": "cortex-a55",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 100,
+      "loop_unrolling": false,
+      "prefetch": false,
+      "target_feature": "+neon,+fp16"
+    },
+    "benchmark": {
+      "avg_ms": 15.062499046325684,
+      "min_ms": 11.797904968261719,
+      "max_ms": 18.88751983642578,
+      "samples": 10
+    }
+  },
+  {
+    "config": {
+      "target_cpu": "cortex-a55",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 100,
+      "loop_unrolling": false,
+      "prefetch": false,
+      "target_feature": "+neon,+fp16"
+    },
+    "benchmark": {
+      "avg_ms": 15.062499046325684,
+      "min_ms": 11.797904968261719,
+      "max_ms": 18.88751983642578,
+      "samples": 10
+    }
+  },
+  {
+    "config": {
+      "target_cpu": "generic",
+      "opt_level": "z",
+      "lto": "no",
+      "codegen_units": 1,
+      "inline_threshold": 600,
+      "loop_unrolling": true,
+      "prefetch": true,
+      "target_feature": "+neon,+fp16,+dotprod"
+    },
+    "benchmark": {
+      "avg_ms": 15.139031410217285,
+      "min_ms": 13.547420501708984,
+      "max_ms": 16.90959930419922,
+      "samples": 10
+    }
+  },
+  {
+    "config": {
+      "target_cpu": "cortex-a55",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 100,
+      "loop_unrolling": false,
+      "prefetch": true,
+      "target_feature": "+neon,+fp16,+dotprod"
+    },
+    "benchmark": {
+      "avg_ms": 16.69762134552002,
+      "min_ms": 11.312007904052734,
+      "max_ms": 23.004770278930664,
+      "samples": 10
+    }
+  }
+]

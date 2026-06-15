@@ -1,0 +1,110 @@
+[
+  {
+    "config": {
+      "target_cpu": "cortex-a76",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 400,
+      "loop_unrolling": true,
+      "prefetch": true,
+      "target_feature": "+neon,+fp16"
+    },
+    "benchmark": {
+      "avg_ms": 6.072211265563965,
+      "min_ms": 5.528926849365234,
+      "max_ms": 6.748437881469727,
+      "samples": 10
+    }
+  },
+  {
+    "config": {
+      "target_cpu": "cortex-a76",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 400,
+      "loop_unrolling": true,
+      "prefetch": false,
+      "target_feature": "+neon,+fp16"
+    },
+    "benchmark": {
+      "avg_ms": 6.097722053527832,
+      "min_ms": 5.769014358520508,
+      "max_ms": 6.590843200683594,
+      "samples": 10
+    }
+  },
+  {
+    "config": {
+      "target_cpu": "cortex-a76",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 400,
+      "loop_unrolling": true,
+      "prefetch": false,
+      "target_feature": "+neon,+fp16"
+    },
+    "benchmark": {
+      "avg_ms": 6.097722053527832,
+      "min_ms": 5.769014358520508,
+      "max_ms": 6.590843200683594,
+      "samples": 10
+    }
+  },
+  {
+    "config": {
+      "target_cpu": "cortex-a76",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 400,
+      "loop_unrolling": true,
+      "prefetch": false,
+      "target_feature": "+neon,+fp16"
+    },
+    "benchmark": {
+      "avg_ms": 6.097722053527832,
+      "min_ms": 5.769014358520508,
+      "max_ms": 6.590843200683594,
+      "samples": 10
+    }
+  },
+  {
+    "config": {
+      "target_cpu": "cortex-a76",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 400,
+      "loop_unrolling": true,
+      "prefetch": false,
+      "target_feature": "+neon,+fp16"
+    },
+    "benchmark": {
+      "avg_ms": 6.097722053527832,
+      "min_ms": 5.769014358520508,
+      "max_ms": 6.590843200683594,
+      "samples": 10
+    }
+  },
+  {
+    "config": {
+      "target_cpu": "cortex-a76",
+      "opt_level": "3",
+      "lto": "no",
+      "codegen_units": 8,
+      "inline_threshold": 400,
+      "loop_unrolling": true,
+      "prefetch": false,
+      "target_feature": ""
+    },
+    "benchmark": {
+      "avg_ms": 6.626701354980469,
+      "min_ms": 6.261110305786133,
+      "max_ms": 6.87718391418457,
+      "samples": 10
+    }
+  }
+]
