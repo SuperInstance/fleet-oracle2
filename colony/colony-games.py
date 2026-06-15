@@ -547,8 +547,13 @@ class GamesHandler(BaseHTTPRequestHandler):
             self.send_json({"error": f"Not found: {path}"}, 404)
 
     def do_POST(self):
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length).decode() if content_length > 0 else "{}"
+        # Use cached body if expansion handler already read it
+        cached = getattr(self, '_cached_body', None)
+        if cached is not None:
+            body = cached
+        else:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode() if content_length > 0 else "{}"
         parsed_path = urlparse(self.path)
         path = parsed_path.path
 
@@ -1054,6 +1059,17 @@ _orig_send_json = GamesHandler.send_json
 
 
 def _expanded_do_GET(self):
+    try:
+        return _expanded_do_GET_impl(self)
+    except BrokenPipeError:
+        pass
+    except Exception as e:
+        try:
+            self.send_json({'error': str(e)}, 500)
+        except Exception:
+            pass
+
+def _expanded_do_GET_impl(self):
     parsed = urlparse(self.path)
     path = parsed.path
     params = parse_qs(parsed.query)
@@ -1099,6 +1115,17 @@ def _expanded_do_GET(self):
 
 
 def _expanded_do_POST(self):
+    try:
+        return _expanded_do_POST_impl(self)
+    except BrokenPipeError:
+        pass
+    except Exception as e:
+        try:
+            self.send_json({'error': str(e)}, 500)
+        except Exception:
+            pass
+
+def _expanded_do_POST_impl(self):
     content_length = int(self.headers.get('Content-Length', 0))
     body = self.rfile.read(content_length).decode() if content_length > 0 else '{}'
     parsed_path = urlparse(self.path)
@@ -1181,11 +1208,13 @@ def _expanded_do_POST(self):
         fitness_engine.penalize_reputation(cell, amount, reason)
         return self.send_json({'ok': True, 'cell': cell, 'amount': amount, 'reason': reason})
 
-    # Fall through to original
+    # Cache body for original handler (it will re-read, but we already consumed rfile)
+    self._cached_body = body
     return _orig_do_POST(self)
 
 
 # Apply monkey patches
+GamesHandler.protocol_version = 'HTTP/1.0'
 GamesHandler.do_GET = _expanded_do_GET
 GamesHandler.do_POST = _expanded_do_POST
 
