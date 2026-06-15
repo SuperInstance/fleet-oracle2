@@ -9,3 +9,14 @@ __pycache__/
 # Rust build artifacts
 target/
 **/target/
+
+# Colony cell runtime state (regenerated dynamically)
+colony/cell-*/
+colony/cell-culled-*/
+colony/mayor/
+colony/__pycache__/
+colony/*.pyc
+colony/game-*-ledger.json
+colony/*-ledger.json
+colony/game-*-results.json
+colony/mayor-cron.log
