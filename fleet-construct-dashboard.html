@@ -78,6 +78,32 @@
       <div class="val" id="gc-aggression">—</div>
       <div class="sub" id="gc-detail">Aggression multiplier</div>
     </div>
+    <div class="card" id="card-cf">
+      <h3>☁️ Cloudflare</h3>
+      <div style="font-size:0.9em">
+        <div class="metric-row"><span>Dashboard API</span><span id="cf-dash">—</span></div>
+        <div class="metric-row"><span>Nebula</span><span id="cf-nebula">—</span></div>
+        <div class="metric-row"><span>Website</span><span id="cf-site">—</span></div>
+        <div class="metric-row"><span>Registry</span><span id="cf-registry">—</span></div>
+      </div>
+      <div class="sub" style="margin-top:8px">Edge heartbeat</div>
+    </div>
+    <div class="card" id="card-pipeline">
+      <h3>🔁 Pipeline</h3>
+      <div style="font-size:0.9em">
+        <div class="metric-row"><span>Collect→</span><span class="status-dot" id="step1"></span>metrics</div>
+        <div class="metric-row"><span>Compute→</span><span class="status-dot" id="step2"></span>γ/η/C</div>
+        <div class="metric-row"><span>Post→</span><span class="status-dot" id="step3"></span>conservation</div>
+        <div class="metric-row"><span>Append→</span><span class="status-dot" id="step4"></span>rotation</div>
+        <div class="metric-row"><span>Store→</span><span class="status-dot" id="step5"></span>harbor bottle</div>
+        <div class="metric-row"><span>Embed→</span><span class="status-dot" id="step6"></span>headspace</div>
+        <div class="metric-row"><span>Alert→</span><span class="status-dot" id="step7"></span>webhook</div>
+        <div class="metric-row"><span>Detect→</span><span class="status-dot" id="step8"></span>anomaly</div>
+        <div class="metric-row"><span>Tune→</span><span class="status-dot" id="step9"></span>self-tune</div>
+        <div class="metric-row"><span>Evict→</span><span class="status-dot" id="step10"></span>auto-evict</div>
+        <div class="metric-row"><span>Sync→</span><span class="status-dot" id="step11"></span>CF feed</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -157,6 +183,49 @@ async function refresh() {
     }
   } catch(e) {
     document.getElementById('rotation-count').textContent = '✕';
+  }
+
+  // Cloudflare
+  const cfEndpoints = {
+    'dash': 'https://fleet-dashboard-api.casey-digennaro.workers.dev',
+    'nebula': 'https://fleet-murmur-worker.casey-digennaro.workers.dev',
+    'site': 'https://superinstance-website.pages.dev',
+    'registry': 'https://fleet-registry-worker.casey-digennaro.workers.dev',
+  };
+  for (const [id, url] of Object.entries(cfEndpoints)) {
+    try {
+      const r = await fetch(url+'/api/health', {signal: AbortSignal.timeout(5000)}).then(r => r.json());
+      const el = document.getElementById('cf-'+id);
+      if (el) {
+        el.innerHTML = '<span class="status-dot dot-green"></span> ' + (r.status || 'ok');
+      }
+    } catch {
+      const el = document.getElementById('cf-'+id);
+      if (el) el.innerHTML = '<span class="status-dot dot-red"></span> unreachable';
+    }
+  }
+
+  // Pipeline — green all if conservation reports > 0
+  try {
+    const c = await fetch('http://localhost:8798/api/status').then(r => r.json());
+    const reports = c.total_reports || 0;
+    const steps = ['step1','step2','step3','step4','step5','step6','step7','step8','step9','step10'];
+    steps.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.className = 'status-dot ' + (reports > 0 ? 'dot-green' : 'dot-red');
+    });
+    // Step 11 (CF feed) — check separately
+    const el11 = document.getElementById('step11');
+    if (el11) {
+      try {
+        await fetch('https://fleet-dashboard-api.casey-digennaro.workers.dev/api/fleet/status', {signal: AbortSignal.timeout(5000)});
+        el11.className = 'status-dot dot-green';
+      } catch {
+        el11.className = 'status-dot dot-yellow';
+      }
+    }
+  } catch {
+    // all red
   }
 }
 
