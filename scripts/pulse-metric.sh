@@ -264,15 +264,8 @@ main() {
   log "Checking pulse-webhook thresholds..."
   bash "${SCRIPT_DIR}/pulse-webhook.sh" || warn "pulse-webhook check failed; continuing"
 
-  # Step 8: Self-tuning notice — if GC aggression > 4.0, flag for attention
-  local disk_pct_hook
-  disk_pct_hook=$(collect_metrics 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('disk_pct',63))" 2>/dev/null || echo 63)
-  local used_pct=$((100 - disk_pct_hook))
-  local aggression_hook
-  aggression_hook=$(/usr/local/bin/gc-pid-bridge "$used_pct" 2>/dev/null || echo "2.0")
-  if (( $(echo "$aggression_hook > 4.0" | bc -l 2>/dev/null || echo 0) )); then
-    log "NOTICE: GC aggression ${aggression_hook}x — high disk pressure. Consider tuning."
-  fi
+  # Step 8: Self-tuning feedback loop (adjust GC setpoint based on system stress)
+  "${SCRIPT_DIR}/pulse-self-tune.sh" || warn "self-tune loop failed; continuing"
 
   log "=== Pulse Metric ${pulse_id} complete ==="
 }
