@@ -692,5 +692,528 @@ def main():
         server.server_close()
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🎲 Colony Games Expansion — 6 new games + Fitness Engine
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import math as _math
+
+class DeceptionArena:
+    """🕵️ Deception Arena — truth-tellers vs deceivers"""
+    def __init__(self, colony_path):
+        self.ledger_path = os.path.join(colony_path, 'game-deception-ledger.json')
+        self.state = self._load()
+
+    def _load(self):
+        try:
+            with open(self.ledger_path) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {'claims': [], 'verifications': [], 'deceivers': [], 'scores': {}}
+
+    def _save(self):
+        with open(self.ledger_path, 'w') as f:
+            json.dump(self.state, f, indent=2)
+
+    def make_claim(self, cell, claim_type, claim_data):
+        is_deceiver = cell not in self.state['deceivers'] and random.random() < 0.3
+        if is_deceiver:
+            self.state['deceivers'].append(cell)
+        claim = {
+            'id': f"claim-{len(self.state['claims'])}",
+            'cell': cell,
+            'type': claim_type,
+            'data': claim_data,
+            'is_deception': is_deceiver,
+            'timestamp': time.time(),
+            'verified': False,
+            'verified_by': []
+        }
+        self.state['claims'].append(claim)
+        self._save()
+        return claim
+
+    def verify_claim(self, claim_id, verifier_cell, cross_ref_data):
+        for claim in self.state['claims']:
+            if claim['id'] != claim_id:
+                continue
+            truth_matches = claim['data'] == cross_ref_data
+            if claim['is_deception']:
+                is_truthful = not truth_matches
+            else:
+                is_truthful = truth_matches
+            if is_truthful:
+                self.state['scores'][verifier_cell] = self.state['scores'].get(verifier_cell, 100) + 15
+                if claim['is_deception']:
+                    self.state['scores'][claim['cell']] = self.state['scores'].get(claim['cell'], 100) - 20
+                else:
+                    self.state['scores'][claim['cell']] = self.state['scores'].get(claim['cell'], 100) + 5
+            else:
+                self.state['scores'][verifier_cell] = self.state['scores'].get(verifier_cell, 100) - 10
+            claim['verified'] = True
+            claim['verified_by'].append({'cell': verifier_cell, 'correct': is_truthful})
+            self._save()
+            return is_truthful
+        return None
+
+    def status(self):
+        return {
+            'total_claims': len(self.state['claims']),
+            'verified_claims': sum(1 for c in self.state['claims'] if c['verified']),
+            'deceivers': self.state['deceivers'],
+            'scores': self.state['scores'],
+            'recent_claims': self.state['claims'][-10:],
+        }
+
+
+class DarwinArena:
+    """🧬 Darwin's Arena — evolutionary Prisoner's Dilemma"""
+    STRATEGIES = ['cooperate', 'defect', 'tit-for-tat', 'grudge', 'random']
+
+    def __init__(self, colony_path):
+        self.ledger_path = os.path.join(colony_path, 'game-darwin-ledger.json')
+        self.state = self._load()
+
+    def _load(self):
+        try:
+            with open(self.ledger_path) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {'generations': [], 'population': [], 'generation': 0, 'history': []}
+
+    def _save(self):
+        with open(self.ledger_path, 'w') as f:
+            json.dump(self.state, f, indent=2)
+
+    def run_generation(self, cells):
+        if not cells:
+            return []
+        pop = []
+        for cell in cells:
+            existing = [a for a in self.state['population'] if a['cell'] == cell]
+            if existing:
+                strategy = existing[0]['strategy']
+            else:
+                strategy = random.choice(self.STRATEGIES)
+            pop.append({'cell': cell, 'strategy': strategy, 'fitness': 0, 'games': 0})
+
+        for i in range(len(pop)):
+            for j in range(i + 1, len(pop)):
+                s1, s2 = pop[i]['strategy'], pop[j]['strategy']
+                c1 = s1 == 'cooperate' or (s1 == 'tit-for-tat' and random.random() < 0.9) or (s1 == 'random' and random.random() < 0.5)
+                c2 = s2 == 'cooperate' or (s2 == 'tit-for-tat' and random.random() < 0.9) or (s2 == 'random' and random.random() < 0.5)
+                if c1 and c2:
+                    p1, p2 = 3, 3
+                elif c1 and not c2:
+                    p1, p2 = 0, 5
+                elif not c1 and c2:
+                    p1, p2 = 5, 0
+                else:
+                    p1, p2 = 1, 1
+                pop[i]['fitness'] += p1
+                pop[j]['fitness'] += p2
+                pop[i]['games'] += 1
+                pop[j]['games'] += 1
+                if s1 == 'grudge' and not c2:
+                    pop[i]['strategy'] = 'defect'
+                if s2 == 'grudge' and not c1:
+                    pop[j]['strategy'] = 'defect'
+
+        pop.sort(key=lambda x: x['fitness'], reverse=True)
+        survivors = pop[:max(2, len(pop) // 2)]
+        offspring = []
+        for k in range(len(pop) - len(survivors)):
+            parent = random.choice(survivors[:max(1, len(survivors) // 2)])
+            child_strat = parent['strategy']
+            if random.random() < 0.15:
+                others = [s for s in self.STRATEGIES if s != child_strat]
+                child_strat = random.choice(others) if others else random.choice(self.STRATEGIES)
+            offspring.append({
+                'cell': f"offspring-{len(self.state['population']) + k}-gen{self.state['generation'] + 1}",
+                'strategy': child_strat, 'fitness': 0, 'games': 0, 'parent': parent['cell']
+            })
+        self.state['generation'] += 1
+        self.state['population'] = survivors + offspring
+        strat_counts = {}
+        for s in self.STRATEGIES:
+            strat_counts[s] = sum(1 for a in self.state['population'] if a['strategy'] == s)
+        self.state['generations'].append({
+            'gen': self.state['generation'],
+            'pop_size': len(pop),
+            'survivors': len(survivors),
+            'strategies': strat_counts,
+            'top_fitness': survivors[0]['fitness'] if survivors else 0
+        })
+        self._save()
+        return self.state['population']
+
+    def status(self):
+        return {
+            'generation': self.state['generation'],
+            'population_size': len(self.state['population']),
+            'population': self.state['population'],
+            'history': self.state['generations'][-10:],
+        }
+
+
+class FitnessEngine:
+    """📊 Fitness Engine — learning rate, diversification, discovery, reputation"""
+    def __init__(self, colony_path):
+        self.ledger_path = os.path.join(colony_path, 'game-fitness-ledger.json')
+        self.colony_path = colony_path
+        self.state = self._load()
+
+    def _load(self):
+        try:
+            with open(self.ledger_path) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {'learning_curves': {}, 'diversification': {}, 'discovery': {}, 'reputation': {}, 'history': []}
+
+    def _save(self):
+        with open(self.ledger_path, 'w') as f:
+            json.dump(self.state, f, indent=2)
+
+    def learning_rate(self, cell, window=10):
+        curve = self.state['learning_curves'].get(cell, [])
+        if len(curve) < 2:
+            return 0.0
+        recent = curve[-window:]
+        deltas = [recent[i + 1]['xp'] - recent[i]['xp'] for i in range(len(recent) - 1)]
+        return sum(deltas) / len(deltas) if deltas else 0.0
+
+    def record_xp(self, cell, xp_value):
+        if cell not in self.state['learning_curves']:
+            self.state['learning_curves'][cell] = []
+        self.state['learning_curves'][cell].append({'t': time.time(), 'xp': xp_value})
+        self._save()
+
+    def diversification_multiplier(self, cell, game_types_played):
+        unique = len(set(game_types_played))
+        return min(1.0 + (unique - 1) * 0.25, 2.0)
+
+    def record_game_type(self, cell, game_type):
+        if cell not in self.state['diversification']:
+            self.state['diversification'][cell] = []
+        if game_type not in self.state['diversification'][cell]:
+            self.state['diversification'][cell].append(game_type)
+        self._save()
+
+    def discovery_bonus(self, cell, game_type):
+        who_first = self.state['discovery'].get(game_type)
+        if who_first is None:
+            self.state['discovery'][game_type] = cell
+            self._save()
+            return 50
+        return 0
+
+    def reputation_capital(self, cell):
+        scores, weights = [], []
+        game_weights = [('pd', 1.0), ('trust', 0.8), ('empathy', 0.6), ('deception', 0.7), ('darwin', 0.5)]
+        for game_type, weight in game_weights:
+            ledger_path = os.path.join(self.colony_path, f'game-{game_type}-ledger.json')
+            try:
+                with open(ledger_path) as f:
+                    ledger = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                continue
+            cell_scores = []
+            for r in ledger.get('results', []):
+                if r.get('cell1') == cell or r.get('cell2') == cell:
+                    score = r.get('score', 0)
+                    cell_scores.append(score)
+            for r in ledger.get('scores', {}):
+                pass  # flat dict
+            if cell in ledger.get('scores', {}):
+                cell_scores.append(ledger['scores'][cell])
+            if cell_scores:
+                scores.append(sum(cell_scores) / len(cell_scores))
+                weights.append(weight)
+        if not scores:
+            return 50.0
+        return sum(s * w for s, w in zip(scores, weights)) / sum(weights)
+
+    def lend_reputation(self, from_cell, to_cell, amount):
+        if from_cell not in self.state['reputation']:
+            self.state['reputation'][from_cell] = 100
+        if to_cell not in self.state['reputation']:
+            self.state['reputation'][to_cell] = 100
+        if self.state['reputation'][from_cell] < amount:
+            return False
+        self.state['reputation'][from_cell] -= amount
+        self.state['reputation'][to_cell] += amount
+        self.state['history'].append({
+            'type': 'loan', 'from': from_cell, 'to': to_cell, 'amount': amount, 't': time.time()
+        })
+        self._save()
+        return True
+
+    def penalize_reputation(self, cell, amount, reason):
+        if cell not in self.state['reputation']:
+            self.state['reputation'][cell] = 100
+        self.state['reputation'][cell] = max(0, self.state['reputation'][cell] - amount)
+        self.state['history'].append({
+            'type': 'penalty', 'cell': cell, 'amount': amount, 'reason': reason, 't': time.time()
+        })
+        self._save()
+        return True
+
+    def status(self):
+        return {
+            'learning_curves': {k: len(v) for k, v in self.state['learning_curves'].items()},
+            'diversification': self.state['diversification'],
+            'discovery': self.state['discovery'],
+            'reputation': self.state['reputation'],
+            'history': self.state['history'][-20:],
+        }
+
+
+class DiplomacyEngine:
+    """👑 Diplomacy — bilateral pacts with secret clauses and betrayal tracking"""
+    def __init__(self, colony_path):
+        self.ledger_path = os.path.join(colony_path, 'game-diplomacy-ledger.json')
+        self.state = self._load()
+
+    def _load(self):
+        try:
+            with open(self.ledger_path) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {'pacts': [], 'betrayals': [], 'reputations': {}}
+
+    def _save(self):
+        with open(self.ledger_path, 'w') as f:
+            json.dump(self.state, f, indent=2)
+
+    def create_pact(self, cell1, cell2, terms, secret_clause=None):
+        pact = {
+            'id': f"pact-{len(self.state['pacts'])}",
+            'cell1': cell1, 'cell2': cell2,
+            'terms': terms, 'secret_clause': secret_clause,
+            'active': True, 'betrayed_by': None, 'created': time.time()
+        }
+        self.state['pacts'].append(pact)
+        for c in [cell1, cell2]:
+            if c not in self.state['reputations']:
+                self.state['reputations'][c] = {'trust_score': 100, 'pacts_made': 0, 'betrayals': 0}
+            self.state['reputations'][c]['pacts_made'] += 1
+        self._save()
+        return pact
+
+    def betray(self, pact_id, betrayer_cell, advantage_gained):
+        for pact in self.state['pacts']:
+            if pact['id'] != pact_id or not pact['active']:
+                continue
+            pact['active'] = False
+            pact['betrayed_by'] = betrayer_cell
+            rep = self.state['reputations'].get(betrayer_cell, {'trust_score': 100, 'betrayals': 0})
+            rep['trust_score'] = max(0, rep['trust_score'] - 30)
+            rep['betrayals'] += 1
+            self.state['reputations'][betrayer_cell] = rep
+            other = pact['cell1'] if betrayer_cell == pact['cell2'] else pact['cell2']
+            self.state['betrayals'].append({
+                'pact_id': pact_id, 'betrayer': betrayer_cell, 'victim': other,
+                'advantage': advantage_gained, 'secret_revealed': pact['secret_clause'], 't': time.time()
+            })
+            self._save()
+            return {'betrayal': True, 'trust_penalty': 30, 'secret_clause': pact['secret_clause']}
+        return None
+
+    def cell_reputation(self, cell):
+        return self.state['reputations'].get(cell)
+
+    def status(self):
+        return {
+            'total_pacts': len(self.state['pacts']),
+            'active_pacts': sum(1 for p in self.state['pacts'] if p['active']),
+            'total_betrayals': len(self.state['betrayals']),
+            'reputations': self.state['reputations'],
+            'recent_pacts': self.state['pacts'][-10:],
+            'recent_betrayals': self.state['betrayals'][-10:],
+        }
+
+
+# ── Initialize expanded games ────────────────────────────────────────────
+
+deception_arena = DeceptionArena(COLONY)
+darwin_arena = DarwinArena(COLONY)
+fitness_engine = FitnessEngine(COLONY)
+diplomacy_engine = DiplomacyEngine(COLONY)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🎲 Expanded GamesHandler — new routes appended to the existing handler
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Monkey-patch the existing GamesHandler to add expanded routes.
+# This works because Python allows patching class methods at runtime.
+_orig_do_GET = GamesHandler.do_GET
+_orig_do_POST = GamesHandler.do_POST
+_orig_send_json = GamesHandler.send_json
+
+
+def _expanded_do_GET(self):
+    parsed = urlparse(self.path)
+    path = parsed.path
+    params = parse_qs(parsed.query)
+
+    # 🎲 Deception Arena
+    if path == '/game/deception/status':
+        return self.send_json(deception_arena.status())
+
+    # 🧬 Darwin's Arena
+    if path == '/game/darwin/status':
+        return self.send_json(darwin_arena.status())
+
+    # 📊 Fitness Engine
+    if path == '/fitness/status':
+        return self.send_json(fitness_engine.status())
+
+    if path == '/fitness/learning-curves':
+        cells = lab.get_active_cell_ids()
+        curves = {c: fitness_engine.learning_rate(c) for c in cells}
+        return self.send_json({'learning_rates': curves})
+
+    if path.startswith('/fitness/cell/'):
+        cell = path.split('/fitness/cell/')[-1]
+        if not cell:
+            return self.send_json({'error': 'Need cell name'}, 400)
+        return self.send_json({
+            'cell': cell,
+            'learning_rate': fitness_engine.learning_rate(cell),
+            'reputation_capital': fitness_engine.reputation_capital(cell),
+            'diversification': fitness_engine.state['diversification'].get(cell, []),
+        })
+
+    # 👑 Diplomacy
+    if path == '/game/diplomacy/status':
+        return self.send_json(diplomacy_engine.status())
+
+    if path.startswith('/game/diplomacy/reputation/'):
+        cell = path.split('/game/diplomacy/reputation/')[-1]
+        return self.send_json({'cell': cell, 'reputation': diplomacy_engine.cell_reputation(cell)})
+
+    # Fall through to original
+    return _orig_do_GET(self)
+
+
+def _expanded_do_POST(self):
+    content_length = int(self.headers.get('Content-Length', 0))
+    body = self.rfile.read(content_length).decode() if content_length > 0 else '{}'
+    parsed_path = urlparse(self.path)
+    path = parsed_path.path
+
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError as e:
+        return self.send_json({'error': f'Invalid JSON: {e}'}, 400)
+
+    # 🕵️ Deception Arena
+    if path == '/game/deception/claim':
+        cell = data.get('cell', '')
+        claim_type = data.get('claim_type', 'state')
+        claim_data = data.get('claim_data', '')
+        if not cell or not claim_data:
+            return self.send_json({'error': 'Need cell and claim_data'}, 400)
+        claim = deception_arena.make_claim(cell, claim_type, claim_data)
+        discovery = fitness_engine.discovery_bonus(cell, 'deception')
+        fitness_engine.record_game_type(cell, 'deception')
+        fitness_engine.record_xp(cell, lab.get_cell_xp(cell))
+        result = {'claim': claim}
+        if discovery:
+            result['discovery_bonus'] = discovery
+        return self.send_json(result)
+
+    if path == '/game/deception/verify':
+        claim_id = data.get('claim_id', '')
+        verifier = data.get('verifier', '')
+        cross_ref = data.get('cross_ref_data', '')
+        if not claim_id or not verifier or not cross_ref:
+            return self.send_json({'error': 'Need claim_id, verifier, cross_ref_data'}, 400)
+        result = deception_arena.verify_claim(claim_id, verifier, cross_ref)
+        return self.send_json({'claim_id': claim_id, 'verified': result})
+
+    # 🧬 Darwin's Arena
+    if path == '/game/darwin/generation':
+        cells = data.get('cells', lab.get_active_cell_ids())
+        population = darwin_arena.run_generation(cells)
+        return self.send_json({'generation': darwin_arena.state['generation'], 'population': population})
+
+    # 👑 Diplomacy
+    if path == '/game/diplomacy/pact':
+        cell1 = data.get('cell1', '')
+        cell2 = data.get('cell2', '')
+        terms = data.get('terms', '')
+        secret = data.get('secret_clause')
+        if not cell1 or not cell2 or not terms:
+            return self.send_json({'error': 'Need cell1, cell2, terms'}, 400)
+        pact = diplomacy_engine.create_pact(cell1, cell2, terms, secret)
+        fitness_engine.record_game_type(cell1, 'diplomacy')
+        fitness_engine.record_game_type(cell2, 'diplomacy')
+        return self.send_json({'pact': pact})
+
+    if path == '/game/diplomacy/betray':
+        pact_id = data.get('pact_id', '')
+        betrayer = data.get('betrayer', '')
+        advantage = data.get('advantage', 0)
+        if not pact_id or not betrayer:
+            return self.send_json({'error': 'Need pact_id, betrayer'}, 400)
+        result = diplomacy_engine.betray(pact_id, betrayer, advantage)
+        return self.send_json(result)
+
+    # 📊 Fitness Engine
+    if path == '/fitness/reputation/loan':
+        from_cell = data.get('from_cell', '')
+        to_cell = data.get('to_cell', '')
+        amount = int(data.get('amount', 0))
+        if not from_cell or not to_cell or amount < 1:
+            return self.send_json({'error': 'Need from_cell, to_cell, amount'}, 400)
+        result = fitness_engine.lend_reputation(from_cell, to_cell, amount)
+        return self.send_json({'ok': result, 'from': from_cell, 'to': to_cell, 'amount': amount})
+
+    if path == '/fitness/reputation/penalty':
+        cell = data.get('cell', '')
+        amount = int(data.get('amount', 0))
+        reason = data.get('reason', 'unknown')
+        if not cell or amount < 1:
+            return self.send_json({'error': 'Need cell, amount'}, 400)
+        fitness_engine.penalize_reputation(cell, amount, reason)
+        return self.send_json({'ok': True, 'cell': cell, 'amount': amount, 'reason': reason})
+
+    # Fall through to original
+    return _orig_do_POST(self)
+
+
+# Apply monkey patches
+GamesHandler.do_GET = _expanded_do_GET
+GamesHandler.do_POST = _expanded_do_POST
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🚀 Modified main() — expanded startup banner
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_orig_main = main
+
+def expanded_main():
+    print(file=sys.stderr)
+    print("╔═══════════════════════════════════════════════════════╗", file=sys.stderr)
+    print("║     🎲  Colony Games — Agentic Psychology Lab        ║", file=sys.stderr)
+    print("╠═══════════════════════════════════════════════════════╣", file=sys.stderr)
+    print("║  🎮 Prisoner's Colloquium   🤝 Trust Auction        ║", file=sys.stderr)
+    print("║  💚 Empathy Loop            🎲 Recursive Meta-Bet   ║", file=sys.stderr)
+    print("║  🕵️ Deception Arena         🧬 Darwin's Arena       ║", file=sys.stderr)
+    print("║  👑 Diplomacy               📊 Fitness Engine       ║", file=sys.stderr)
+    print("╚═══════════════════════════════════════════════════════╝", file=sys.stderr)
+    print(file=sys.stderr)
+    print(f"  Port: {PORT}  |  Colony: {COLONY}", file=sys.stderr)
+    print(file=sys.stderr)
+    _orig_main()
+
+main = expanded_main
+
+# End of colony-games expansion
+
 if __name__ == "__main__":
     main()
