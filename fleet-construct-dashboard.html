@@ -135,9 +135,10 @@ async function refresh() {
     // GC PID
     try {
       const pct = trend.length > 0 ? parseInt(trend[trend.length-1])/10 : 63;
-      const resp = await fetch('/api/gc-pid?'+pct);
+      const resp = await fetch('http://localhost:8785/api/aggression?used_pct='+pct);
       const g = await resp.json();
       document.getElementById('gc-aggression').textContent = g.aggression + 'x';
+      document.getElementById('gc-detail').textContent = 'setpoint='+g.setpoint+'% used='+g.used_pct+'%';
     } catch(e) {
       document.getElementById('gc-aggression').textContent = '—';
     }
