@@ -1,0 +1,28 @@
+{
+  "event": "state_anomaly",
+  "similarity": 0.82155204,
+  "threshold": 0.85,
+  "top_match_id": "57366f61-2003-4645-bd87-d150d117ffd6",
+  "gamma": 9999,
+  "eta": 9999,
+  "c": 19998,
+  "disk_pct": 99,
+  "ram_free_mb": 100,
+  "load": 9.99,
+  "services_active": 99,
+  "consecutive": 1
+}
+{
+  "event": "state_anomaly",
+  "similarity": 0.8215517,
+  "threshold": 0.85,
+  "top_match_id": "57366f61-2003-4645-bd87-d150d117ffd6",
+  "gamma": 9999,
+  "eta": 9999,
+  "c": 19998,
+  "disk_pct": 99,
+  "ram_free_mb": 100,
+  "load": 9.99,
+  "services_active": 99,
+  "consecutive": 3
+}

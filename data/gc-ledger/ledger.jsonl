@@ -1,1 +1,12 @@
 {"ts":"2026-06-15T00:11:09Z","epoch":1781482269,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---status","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T03:20:03Z","epoch":1781493603,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T03:20:03Z","epoch":1781493603,"action":"cleanup","item":"system-logs","size_kb":104968,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":104968}
+{"ts":"2026-06-15T03:25:03Z","epoch":1781493903,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T03:25:03Z","epoch":1781493903,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T04:00:02Z","epoch":1781496002,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---status","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T04:00:04Z","epoch":1781496004,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T04:00:04Z","epoch":1781496004,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T04:05:03Z","epoch":1781496303,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T04:05:03Z","epoch":1781496303,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T04:10:03Z","epoch":1781496603,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T04:10:03Z","epoch":1781496603,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}

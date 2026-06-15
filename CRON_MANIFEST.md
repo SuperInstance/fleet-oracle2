@@ -244,6 +244,30 @@ Centralized record of every scheduled job in the fleet — cron, systemd timers,
 
 ---
 
+## fleet-sync-to-baton
+- **Type:** system-crontab
+- **Runs:** cron `0 4 * * *` (04:00 UTC daily)
+- **Script:** `/home/ubuntu/.openclaw/workspace/construct/scripts/fleet-sync-to-baton.sh`
+- **Log:** `/home/ubuntu/.openclaw/workspace/construct/logs/fleet-sync-cron.log`
+- **Deps:** conservation-meter (port 8798), harbor-daemon (port 8797), gc-intelligent.sh, baton-system repo, git remote
+- **On failure:** Bottle not written for the day; check conservation-meter, harbor-daemon, and git remote connectivity
+- **Notes:** Writes CONSTRUCT_INTELLIGENCE bottle to baton-system/tiers/hot/; commits and pushes to baton-system repo; also mirrors to i2i-vessel/bottles/
+
+---
+
+## pulse-gamma-predictor
+- **Type:** system-crontab + systemd-timer (dual path)
+- **Runs:** systemd timer every 30s (primary); cron `* * * * *` every minute (fallback)
+- **Script:** `/home/ubuntu/.openclaw/workspace/construct/scripts/pulse-gamma-predictor.sh`
+  - Calls Python: `/home/ubuntu/.openclaw/workspace/construct/scripts/gamma-predictor.py`
+- **Logs:**
+  - Prediction records: `/home/ubuntu/.openclaw/workspace/construct/logs/gamma-predictions.log`
+  - Systemd timer output: `/home/ubuntu/.openclaw/workspace/construct/logs/gamma-predictor-timer.log`
+  - Cron fallback output: `/home/ubuntu/.openclaw/workspace/construct/logs/gamma-predictor-cron.log`
+- **Deps:** conservation-meter (port 8798), harbor-daemon (port 8796), headspace-rs (port 9090)
+- **On failure:** Bottle/segment not sent; check conservation-meter API health; gamma-predictor logs show ERROR predictions
+- **Notes:** Predictive gamma scheduling for Oracle2. SPIKE prediction → harbor bottle (priority 5) + headspace-rs segment. DIP prediction → harbor bottle (priority 3). Systemd timer is the primary path; cron fallback ensures coverage
+
 ## Scheduler Health Check
 
 A health checker runs independently and writes to `/tmp/scheduler-health.json`. See `scheduler-health.sh`.

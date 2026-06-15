@@ -285,6 +285,10 @@ main() {
   log "Feeding metrics to fleet-dashboard-api Worker..."
   bash "${SCRIPT_DIR}/pulse-cf-feed.sh" || warn "pulse-cf-feed failed; continuing"
 
+  # Step 12: Gamma predictor (run every cycle)
+  log "Running gamma spike/dip predictor..."
+  bash "${SCRIPT_DIR}/pulse-gamma-predictor.sh" || warn "gamma-predictor failed; continuing"
+
   # Step 11: Healthcheck ping (external monitor for pipeline liveness)
   # Uses healthchecks.io if configured, otherwise logs and moves on
   if [[ -n "${HEALTHCHECK_URL:-}" ]]; then
