@@ -72,3 +72,12 @@
 {"ts":"2026-06-15T11:45:03Z","epoch":1781523903,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}
 {"ts":"2026-06-15T11:50:03Z","epoch":1781524203,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
 {"ts":"2026-06-15T11:50:03Z","epoch":1781524203,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T12:27:57Z","epoch":1781526477,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start-dry-run","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T12:27:59Z","epoch":1781526479,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T12:27:59Z","epoch":1781526479,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T12:35:03Z","epoch":1781526903,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T12:35:03Z","epoch":1781526903,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T12:40:03Z","epoch":1781527203,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T12:40:03Z","epoch":1781527203,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T13:00:03Z","epoch":1781528403,"action":"cycle-start","item":"gc-run","size_kb":0,"reason":"cycle-start---execute","tier":"system","success":true,"freed_kb":0}
+{"ts":"2026-06-15T13:00:03Z","epoch":1781528403,"action":"cleanup","item":"system-logs","size_kb":0,"reason":"log-cleanup","tier":"system","success":true,"freed_kb":0}
