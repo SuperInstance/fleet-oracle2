@@ -281,7 +281,11 @@ main() {
   log "Checking GC auto-evict trigger..."
   bash "${SCRIPT_DIR}/gc-auto-evict.sh" || warn "gc-auto-evict failed; continuing"
 
-  # Step 10: Healthcheck ping (external monitor for pipeline liveness)
+  # Step 10: Feed live metrics to fleet-dashboard-api Worker (Cloudflare)
+  log "Feeding metrics to fleet-dashboard-api Worker..."
+  bash "${SCRIPT_DIR}/pulse-cf-feed.sh" || warn "pulse-cf-feed failed; continuing"
+
+  # Step 11: Healthcheck ping (external monitor for pipeline liveness)
   # Uses healthchecks.io if configured, otherwise logs and moves on
   if [[ -n "${HEALTHCHECK_URL:-}" ]]; then
     curl -sf --max-time 10 "${HEALTHCHECK_URL}" > /dev/null 2>&1 || \
