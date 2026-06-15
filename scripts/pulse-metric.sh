@@ -17,6 +17,11 @@ CONSERVATION_URL="http://localhost:8798/api/report"
 HARBOR_HOST="127.0.0.1"
 HARBOR_PORT=8796
 
+# Healthcheck URL (optional) — set HEALTHCHECK_URL env var to enable
+# Example: https://hc-ping.com/your-uuid
+# If set, pulse-metric will ping it every cycle as a liveness signal
+HEALTHCHECK_URL="${HEALTHCHECK_URL:-}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONSTRUCT_DIR="$(dirname "$SCRIPT_DIR")"
 ROTATION_FEED="${CONSTRUCT_DIR}/data/rotation-feed.json"
@@ -275,6 +280,13 @@ main() {
   # Step 9: Auto-evict — if setpoint dropped into critical zone, trigger GC eviction
   log "Checking GC auto-evict trigger..."
   bash "${SCRIPT_DIR}/gc-auto-evict.sh" || warn "gc-auto-evict failed; continuing"
+
+  # Step 10: Healthcheck ping (external monitor for pipeline liveness)
+  # Uses healthchecks.io if configured, otherwise logs and moves on
+  if [[ -n "${HEALTHCHECK_URL:-}" ]]; then
+    curl -sf --max-time 10 "${HEALTHCHECK_URL}" > /dev/null 2>&1 || \
+      warn "healthcheck ping failed"
+  fi
 
   log "=== Pulse Metric ${pulse_id} complete ==="
 }
