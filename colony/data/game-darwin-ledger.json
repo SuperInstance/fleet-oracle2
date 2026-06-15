@@ -1,0 +1,236 @@
+{
+  "generations": [
+    {
+      "gen": 1,
+      "pop_size": 4,
+      "survivors": 2,
+      "strategies": {
+        "cooperate": 0,
+        "defect": 3,
+        "tit-for-tat": 1,
+        "grudge": 0,
+        "random": 0
+      },
+      "top_fitness": 15
+    },
+    {
+      "gen": 2,
+      "pop_size": 13,
+      "survivors": 6,
+      "strategies": {
+        "cooperate": 0,
+        "defect": 10,
+        "tit-for-tat": 1,
+        "grudge": 0,
+        "random": 2
+      },
+      "top_fitness": 48
+    },
+    {
+      "gen": 3,
+      "pop_size": 13,
+      "survivors": 6,
+      "strategies": {
+        "cooperate": 3,
+        "defect": 8,
+        "tit-for-tat": 0,
+        "grudge": 1,
+        "random": 1
+      },
+      "top_fitness": 40
+    },
+    {
+      "gen": 4,
+      "pop_size": 13,
+      "survivors": 6,
+      "strategies": {
+        "cooperate": 0,
+        "defect": 12,
+        "tit-for-tat": 0,
+        "grudge": 0,
+        "random": 1
+      },
+      "top_fitness": 20
+    },
+    {
+      "gen": 5,
+      "pop_size": 4,
+      "survivors": 2,
+      "strategies": {
+        "cooperate": 0,
+        "defect": 4,
+        "tit-for-tat": 0,
+        "grudge": 0,
+        "random": 0
+      },
+      "top_fitness": 7
+    },
+    {
+      "gen": 6,
+      "pop_size": 13,
+      "survivors": 6,
+      "strategies": {
+        "cooperate": 0,
+        "defect": 13,
+        "tit-for-tat": 0,
+        "grudge": 0,
+        "random": 0
+      },
+      "top_fitness": 32
+    },
+    {
+      "gen": 7,
+      "pop_size": 13,
+      "survivors": 6,
+      "strategies": {
+        "cooperate": 0,
+        "defect": 13,
+        "tit-for-tat": 0,
+        "grudge": 0,
+        "random": 0
+      },
+      "top_fitness": 20
+    },
+    {
+      "gen": 8,
+      "pop_size": 13,
+      "survivors": 6,
+      "strategies": {
+        "cooperate": 0,
+        "defect": 12,
+        "tit-for-tat": 0,
+        "grudge": 1,
+        "random": 0
+      },
+      "top_fitness": 36
+    },
+    {
+      "gen": 9,
+      "pop_size": 13,
+      "survivors": 6,
+      "strategies": {
+        "cooperate": 1,
+        "defect": 11,
+        "tit-for-tat": 0,
+        "grudge": 1,
+        "random": 0
+      },
+      "top_fitness": 24
+    },
+    {
+      "gen": 10,
+      "pop_size": 13,
+      "survivors": 6,
+      "strategies": {
+        "cooperate": 0,
+        "defect": 12,
+        "tit-for-tat": 0,
+        "grudge": 1,
+        "random": 0
+      },
+      "top_fitness": 24
+    },
+    {
+      "gen": 11,
+      "pop_size": 13,
+      "survivors": 6,
+      "strategies": {
+        "cooperate": 0,
+        "defect": 13,
+        "tit-for-tat": 0,
+        "grudge": 0,
+        "random": 0
+      },
+      "top_fitness": 36
+    }
+  ],
+  "population": [
+    {
+      "cell": "culler",
+      "strategy": "defect",
+      "fitness": 36,
+      "games": 12
+    },
+    {
+      "cell": "harvester",
+      "strategy": "defect",
+      "fitness": 36,
+      "games": 12
+    },
+    {
+      "cell": "hybrid-synthxpulse-662",
+      "strategy": "defect",
+      "fitness": 36,
+      "games": 12
+    },
+    {
+      "cell": "gc-warden",
+      "strategy": "defect",
+      "fitness": 32,
+      "games": 12
+    },
+    {
+      "cell": "synth-squared",
+      "strategy": "defect",
+      "fitness": 32,
+      "games": 12
+    },
+    {
+      "cell": "chek-squared",
+      "strategy": "defect",
+      "fitness": 28,
+      "games": 12
+    },
+    {
+      "cell": "offspring-13-gen11",
+      "strategy": "defect",
+      "fitness": 0,
+      "games": 0,
+      "parent": "hybrid-synthxpulse-662"
+    },
+    {
+      "cell": "offspring-14-gen11",
+      "strategy": "defect",
+      "fitness": 0,
+      "games": 0,
+      "parent": "hybrid-synthxpulse-662"
+    },
+    {
+      "cell": "offspring-15-gen11",
+      "strategy": "defect",
+      "fitness": 0,
+      "games": 0,
+      "parent": "culler"
+    },
+    {
+      "cell": "offspring-16-gen11",
+      "strategy": "defect",
+      "fitness": 0,
+      "games": 0,
+      "parent": "culler"
+    },
+    {
+      "cell": "offspring-17-gen11",
+      "strategy": "defect",
+      "fitness": 0,
+      "games": 0,
+      "parent": "hybrid-synthxpulse-662"
+    },
+    {
+      "cell": "offspring-18-gen11",
+      "strategy": "defect",
+      "fitness": 0,
+      "games": 0,
+      "parent": "culler"
+    },
+    {
+      "cell": "offspring-19-gen11",
+      "strategy": "defect",
+      "fitness": 0,
+      "games": 0,
+      "parent": "hybrid-synthxpulse-662"
+    }
+  ],
+  "generation": 11,
+  "history": []
+}

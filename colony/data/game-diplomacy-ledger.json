@@ -1,0 +1,603 @@
+{
+  "pacts": [
+    {
+      "id": "pact-0",
+      "cell1": "synthesizer",
+      "cell2": "harvester",
+      "terms": "mutual cooperation",
+      "secret_clause": "secrets",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529292.0741067
+    },
+    {
+      "id": "pact-1",
+      "cell1": "bottle-counter",
+      "cell2": "chek-squared",
+      "terms": "share state data",
+      "secret_clause": "logging metrics",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529323.0745935
+    },
+    {
+      "id": "pact-2",
+      "cell1": "culler",
+      "cell2": "pulse-squared",
+      "terms": "mutual cooperation cycle 7",
+      "secret_clause": null,
+      "active": false,
+      "betrayed_by": "pulse-squared",
+      "created": 1781529655.5765178
+    },
+    {
+      "id": "pact-3",
+      "cell1": "synthesizer",
+      "cell2": "chek-squared",
+      "terms": "mutual cooperation cycle 7",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529655.580159
+    },
+    {
+      "id": "pact-4",
+      "cell1": "culler",
+      "cell2": "synth-squared",
+      "terms": "mutual cooperation cycle 7",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529655.5828967
+    },
+    {
+      "id": "pact-5",
+      "cell1": "chek-squared",
+      "cell2": "hybrid-synthxpulse-662",
+      "terms": "mutual cooperation cycle 14",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529730.9281244
+    },
+    {
+      "id": "pact-6",
+      "cell1": "pulse-check",
+      "cell2": "synthesizer",
+      "terms": "mutual cooperation cycle 14",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529730.9320157
+    },
+    {
+      "id": "pact-7",
+      "cell1": "hybrid-synthxpulse-662",
+      "cell2": "pulse-squared",
+      "terms": "mutual cooperation cycle 14",
+      "secret_clause": "secret knowledge about rotation feed",
+      "active": false,
+      "betrayed_by": "pulse-squared",
+      "created": 1781529730.936861
+    },
+    {
+      "id": "pact-8",
+      "cell1": "gc-warden",
+      "cell2": "pulse-oracle",
+      "terms": "mutual cooperation cycle 21",
+      "secret_clause": "secret knowledge about rotation feed",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529831.3271692
+    },
+    {
+      "id": "pact-9",
+      "cell1": "oracle-breeder",
+      "cell2": "pulse-squared",
+      "terms": "mutual cooperation cycle 21",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529831.331159
+    },
+    {
+      "id": "pact-10",
+      "cell1": "harvester",
+      "cell2": "logger",
+      "terms": "mutual cooperation cycle 21",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529831.3342252
+    },
+    {
+      "id": "pact-11",
+      "cell1": "bottle-counter",
+      "cell2": "synth-squared",
+      "terms": "mutual cooperation cycle 28",
+      "secret_clause": null,
+      "active": false,
+      "betrayed_by": "synth-squared",
+      "created": 1781529896.6526327
+    },
+    {
+      "id": "pact-12",
+      "cell1": "synth-squared",
+      "cell2": "bottle-counter",
+      "terms": "mutual cooperation cycle 28",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529896.6557667
+    },
+    {
+      "id": "pact-13",
+      "cell1": "harvester",
+      "cell2": "pulse-check",
+      "terms": "mutual cooperation cycle 28",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529896.6584659
+    },
+    {
+      "id": "pact-14",
+      "cell1": "logger",
+      "cell2": "gc-warden",
+      "terms": "mutual cooperation cycle 35",
+      "secret_clause": "secret knowledge about rotation feed",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529997.0727818
+    },
+    {
+      "id": "pact-15",
+      "cell1": "synth-squared",
+      "cell2": "pulse-check",
+      "terms": "mutual cooperation cycle 35",
+      "secret_clause": "secret knowledge about rotation feed",
+      "active": false,
+      "betrayed_by": "pulse-check",
+      "created": 1781529997.0760756
+    },
+    {
+      "id": "pact-16",
+      "cell1": "chek-squared",
+      "cell2": "pulse-check",
+      "terms": "mutual cooperation cycle 35",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781529997.0792549
+    },
+    {
+      "id": "pact-17",
+      "cell1": "oracle-breeder",
+      "cell2": "culler",
+      "terms": "mutual cooperation cycle 42",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530069.906287
+    },
+    {
+      "id": "pact-18",
+      "cell1": "bottle-counter",
+      "cell2": "oracle-breeder",
+      "terms": "mutual cooperation cycle 42",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530069.9097042
+    },
+    {
+      "id": "pact-19",
+      "cell1": "pulse-check",
+      "cell2": "harvester",
+      "terms": "mutual cooperation cycle 42",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530069.913153
+    },
+    {
+      "id": "pact-20",
+      "cell1": "synthesizer",
+      "cell2": "harvester",
+      "terms": "test pact",
+      "secret_clause": "test",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530596.397302
+    },
+    {
+      "id": "pact-21",
+      "cell1": "chek-squared",
+      "cell2": "bottle-counter",
+      "terms": "mutual-cycle-7",
+      "secret_clause": "rotation-feed-data-7",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530634.8121858
+    },
+    {
+      "id": "pact-22",
+      "cell1": "oracle-breeder",
+      "cell2": "harvester",
+      "terms": "mutual-cycle-7",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530634.8158774
+    },
+    {
+      "id": "pact-23",
+      "cell1": "pulse-oracle",
+      "cell2": "gc-warden",
+      "terms": "mutual-cycle-14",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530635.2469432
+    },
+    {
+      "id": "pact-24",
+      "cell1": "logger",
+      "cell2": "gc-warden",
+      "terms": "mutual-cycle-14",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530635.250777
+    },
+    {
+      "id": "pact-25",
+      "cell1": "chek-squared",
+      "cell2": "pulse-check",
+      "terms": "mutual-cycle-21",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530636.089579
+    },
+    {
+      "id": "pact-26",
+      "cell1": "pulse-squared",
+      "cell2": "hybrid-synthxpulse-662",
+      "terms": "mutual-cycle-21",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530636.093514
+    },
+    {
+      "id": "pact-27",
+      "cell1": "pulse-squared",
+      "cell2": "pulse-oracle",
+      "terms": "mutual-cycle-28",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530636.6698763
+    },
+    {
+      "id": "pact-28",
+      "cell1": "pulse-check",
+      "cell2": "synthesizer",
+      "terms": "mutual-cycle-28",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530636.673929
+    },
+    {
+      "id": "pact-29",
+      "cell1": "harvester",
+      "cell2": "bottle-counter",
+      "terms": "mutual-cycle-35",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530637.4869785
+    },
+    {
+      "id": "pact-30",
+      "cell1": "bottle-counter",
+      "cell2": "pulse-oracle",
+      "terms": "mutual-cycle-35",
+      "secret_clause": null,
+      "active": false,
+      "betrayed_by": "pulse-oracle",
+      "created": 1781530637.4911199
+    },
+    {
+      "id": "pact-31",
+      "cell1": "hybrid-synthxpulse-662",
+      "cell2": "bottle-counter",
+      "terms": "mutual-cycle-42",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530638.4267194
+    },
+    {
+      "id": "pact-32",
+      "cell1": "logger",
+      "cell2": "pulse-oracle",
+      "terms": "mutual-cycle-42",
+      "secret_clause": "rotation-feed-data-42",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530638.4310522
+    },
+    {
+      "id": "pact-33",
+      "cell1": "chek-squared",
+      "cell2": "logger",
+      "terms": "mutual-cycle-49",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530639.4869432
+    },
+    {
+      "id": "pact-34",
+      "cell1": "synth-squared",
+      "cell2": "chek-squared",
+      "terms": "mutual-cycle-49",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530639.491477
+    },
+    {
+      "id": "pact-35",
+      "cell1": "pulse-oracle",
+      "cell2": "harvester",
+      "terms": "mutual-cycle-56",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530640.7455628
+    },
+    {
+      "id": "pact-36",
+      "cell1": "harvester",
+      "cell2": "culler",
+      "terms": "mutual-cycle-56",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530640.7503765
+    },
+    {
+      "id": "pact-37",
+      "cell1": "chek-squared",
+      "cell2": "logger",
+      "terms": "mutual-cycle-63",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530641.9324257
+    },
+    {
+      "id": "pact-38",
+      "cell1": "oracle-breeder",
+      "cell2": "synthesizer",
+      "terms": "mutual-cycle-63",
+      "secret_clause": "rotation-feed-data-63",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530641.9371805
+    },
+    {
+      "id": "pact-39",
+      "cell1": "hybrid-synthxpulse-662",
+      "cell2": "logger",
+      "terms": "mutual-cycle-70",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530643.4524393
+    },
+    {
+      "id": "pact-40",
+      "cell1": "oracle-breeder",
+      "cell2": "hybrid-synthxpulse-662",
+      "terms": "mutual-cycle-70",
+      "secret_clause": "rotation-feed-data-70",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530643.4574468
+    },
+    {
+      "id": "pact-41",
+      "cell1": "synthesizer",
+      "cell2": "culler",
+      "terms": "mutual-cycle-77",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530644.908337
+    },
+    {
+      "id": "pact-42",
+      "cell1": "logger",
+      "cell2": "gc-warden",
+      "terms": "mutual-cycle-77",
+      "secret_clause": "rotation-feed-data-77",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530644.9145243
+    },
+    {
+      "id": "pact-43",
+      "cell1": "logger",
+      "cell2": "pulse-check",
+      "terms": "mutual-cycle-84",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530646.7485452
+    },
+    {
+      "id": "pact-44",
+      "cell1": "oracle-breeder",
+      "cell2": "pulse-oracle",
+      "terms": "mutual-cycle-84",
+      "secret_clause": "rotation-feed-data-84",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530646.7558324
+    },
+    {
+      "id": "pact-45",
+      "cell1": "synthesizer",
+      "cell2": "synth-squared",
+      "terms": "mutual-cycle-91",
+      "secret_clause": "rotation-feed-data-91",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530648.5781934
+    },
+    {
+      "id": "pact-46",
+      "cell1": "pulse-oracle",
+      "cell2": "gc-warden",
+      "terms": "mutual-cycle-91",
+      "secret_clause": null,
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530648.585713
+    },
+    {
+      "id": "pact-47",
+      "cell1": "hybrid-synthxpulse-662",
+      "cell2": "pulse-squared",
+      "terms": "mutual-cycle-98",
+      "secret_clause": "rotation-feed-data-98",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530650.2493942
+    },
+    {
+      "id": "pact-48",
+      "cell1": "pulse-check",
+      "cell2": "culler",
+      "terms": "mutual-cycle-98",
+      "secret_clause": "rotation-feed-data-98",
+      "active": true,
+      "betrayed_by": null,
+      "created": 1781530650.256787
+    }
+  ],
+  "betrayals": [
+    {
+      "pact_id": "pact-2",
+      "betrayer": "pulse-squared",
+      "victim": "culler",
+      "advantage": 39,
+      "secret_revealed": null,
+      "t": 1781529730.9415379
+    },
+    {
+      "pact_id": "pact-11",
+      "betrayer": "synth-squared",
+      "victim": "bottle-counter",
+      "advantage": 15,
+      "secret_revealed": null,
+      "t": 1781529896.6619444
+    },
+    {
+      "pact_id": "pact-7",
+      "betrayer": "pulse-squared",
+      "victim": "hybrid-synthxpulse-662",
+      "advantage": 11,
+      "secret_revealed": "secret knowledge about rotation feed",
+      "t": 1781529997.0831273
+    },
+    {
+      "pact_id": "pact-15",
+      "betrayer": "pulse-check",
+      "victim": "synth-squared",
+      "advantage": 11,
+      "secret_revealed": "secret knowledge about rotation feed",
+      "t": 1781530069.9179888
+    },
+    {
+      "pact_id": "pact-30",
+      "betrayer": "pulse-oracle",
+      "victim": "bottle-counter",
+      "advantage": 37,
+      "secret_revealed": null,
+      "t": 1781530641.942776
+    }
+  ],
+  "reputations": {
+    "synthesizer": {
+      "trust_score": 100,
+      "pacts_made": 8,
+      "betrayals": 0
+    },
+    "harvester": {
+      "trust_score": 100,
+      "pacts_made": 9,
+      "betrayals": 0
+    },
+    "bottle-counter": {
+      "trust_score": 100,
+      "pacts_made": 8,
+      "betrayals": 0
+    },
+    "chek-squared": {
+      "trust_score": 100,
+      "pacts_made": 9,
+      "betrayals": 0
+    },
+    "culler": {
+      "trust_score": 100,
+      "pacts_made": 6,
+      "betrayals": 0
+    },
+    "pulse-squared": {
+      "trust_score": 40,
+      "pacts_made": 6,
+      "betrayals": 2
+    },
+    "synth-squared": {
+      "trust_score": 70,
+      "pacts_made": 6,
+      "betrayals": 1
+    },
+    "hybrid-synthxpulse-662": {
+      "trust_score": 100,
+      "pacts_made": 7,
+      "betrayals": 0
+    },
+    "pulse-check": {
+      "trust_score": 70,
+      "pacts_made": 9,
+      "betrayals": 1
+    },
+    "gc-warden": {
+      "trust_score": 100,
+      "pacts_made": 6,
+      "betrayals": 0
+    },
+    "pulse-oracle": {
+      "trust_score": 70,
+      "pacts_made": 8,
+      "betrayals": 1
+    },
+    "oracle-breeder": {
+      "trust_score": 100,
+      "pacts_made": 7,
+      "betrayals": 0
+    },
+    "logger": {
+      "trust_score": 100,
+      "pacts_made": 9,
+      "betrayals": 0
+    }
+  }
+}
