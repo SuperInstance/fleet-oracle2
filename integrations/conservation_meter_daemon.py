@@ -89,47 +89,33 @@ def compute_conservation(reputation_data: dict) -> dict:
 
 
 def push_to_conservation_meter(metrics: dict, check_url: str = "http://localhost:8798") -> bool:
-    """Push conservation metrics as a Bottle to the conservation-meter service."""
-    # Create bottle with conservation trits:
-    # trits[0] = conservation signal (+1 if conserved, -1 if violated, 0 if marginal)
-    if metrics["conserved"]:
-        if metrics["delta"] > 0.5:
-            env_trits = [1, 1, 1]    # Healthy headroom
-        else:
-            env_trits = [1, 0, 1]    # Conserved but tight
-    elif 0.5 - metrics["delta"] < 0.1:
-        env_trits = [0, -1, 0]        # Very close — marginal
-    else:
-        env_trits = [-1, -1, -1]      # Violated
+    """Push conservation metrics to the conservation-meter /api/report endpoint.
 
-    bottle = Bottle.new(
-        src="conservation-meter-daemon",
-        tgt="colony-games",
-        act="conservation.fleet.heartbeat",
-        trits=env_trits,
-        payload={
-            **metrics,
-            "type": "colony_conservation_heartbeat",
-            "timestamp": time.time(),
-        },
-        ttl=120,
-    )
-
-    wire = bottle.encode()
+    The conservation-meter uses scaled gamma/eta values (multiplied by 1000).
+    Expected format: {"agent": str, "gamma": int, "eta": int, "task": str, "timestamp": str}
+    """
+    ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    payload = {
+        "agent": "colony-conservation-daemon",
+        "gamma": int(metrics["gamma"] * 1000),
+        "eta": int(metrics["eta"] * 1000),
+        "task": "colony-conservation-heartbeat",
+        "timestamp": ts,
+    }
 
     try:
         req = urllib.request.Request(
-            check_url,
-            data=wire,
+            f"{check_url}/api/report",
+            data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             response_data = json.loads(resp.read())
             return True
-    except (urllib.error.URLError, ConnectionRefusedError) as e:
+    except (urllib.error.URLError, ConnectionRefusedError,
+            urllib.error.HTTPError) as e:
         print(f"  ⚠️  Could not reach conservation meter at {check_url}: {e}")
-        # Still show the bottle on stdout even if push fails
         return False
 
 
