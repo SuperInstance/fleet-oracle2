@@ -44,6 +44,9 @@ import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
+# ── Conservation law patch (γ+η=C) ───────────────────────────────────
+from conserve_server_patch import patch_games_handler
+
 COLONY = os.environ.get("COLONY", os.path.dirname(os.path.abspath(__file__)))
 PORT = int(os.environ.get("GAMES_PORT", 8823))
 
@@ -1341,6 +1344,15 @@ def _expanded_do_POST_impl(self):
 GamesHandler.protocol_version = 'HTTP/1.0'
 GamesHandler.do_GET = _expanded_do_GET
 GamesHandler.do_POST = _expanded_do_POST
+
+# ── Conservation law endpoints (γ+η=C) ───────────────────────────────────
+# Injects /game/conserve/* endpoints as the outermost dispatch layer.
+try:
+    patch_games_handler(GamesHandler, lab)
+    HAVE_CONSERVE = True
+except Exception as e:
+    print(f"[GAMES] Conservation patch failed: {e}", file=sys.stderr)
+    HAVE_CONSERVE = False
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
