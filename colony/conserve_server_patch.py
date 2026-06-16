@@ -345,6 +345,35 @@ def patch_games_handler(handler_class, lab_ref=None):
                 "version": 1,
             })
 
+        elif path == "/game/conserve/taxonomy":
+            """
+            GET the latest taxonomy profiles from the Cell Taxonomist.
+            Returns the most recent personality breakdown of all cells.
+            """
+            lab = getattr(self.server, 'lab', lab_ref)
+            if lab and hasattr(lab, 'taxonomy_profiles') and lab.taxonomy_profiles:
+                self.send_json({
+                    "cycle": getattr(lab, 'taxonomy_cycle', 0),
+                    "profiles": lab.taxonomy_profiles,
+                    "timestamp": getattr(lab, 'taxonomy_timestamp', ""),
+                })
+                return
+
+            # Fall back to on-disk ledger
+            taxonomy_ledger = os.path.join(
+                os.environ.get("COLONY", os.path.dirname(os.path.abspath(__file__))),
+                "game-taxonomy-ledger.json"
+            )
+            if os.path.isfile(taxonomy_ledger):
+                try:
+                    with open(taxonomy_ledger) as f:
+                        data = json.load(f)
+                    self.send_json(data)
+                except (json.JSONDecodeError, OSError):
+                    self.send_json({"error": "Ledger corrupt or unreadable"}, 500)
+            else:
+                self.send_json({"error": "No taxonomy data yet — run cell-taxonomist.py"}, 404)
+
         else:
             original_do_GET(self)
 
@@ -491,6 +520,53 @@ def patch_games_handler(handler_class, lab_ref=None):
                 pass  # Non-fatal
 
             self.send_json(snapshot)
+
+        elif path == "/game/conserve/taxonomy":
+            """
+            Accept taxonomy profiles from the Cell Taxonomist daemon.
+
+            This bridges live Rust cell behavior data into the colony
+            psychology experiments. The profiles include personality factors,
+            taxonomic roles, and game recommendations (PD moves, Darwin
+            strategies, empathy gifts).
+            """
+            payload = data
+            n_cells = len(payload.get("profiles", {}))
+
+            # Persist to taxonomy ledger
+            taxonomy_ledger = os.path.join(
+                os.environ.get("COLONY", os.path.dirname(os.path.abspath(__file__))),
+                "game-taxonomy-ledger.json"
+            )
+            try:
+                with open(taxonomy_ledger, "w") as f:
+                    json.dump(payload, f, indent=2, default=str)
+                saved = True
+            except OSError:
+                saved = False
+
+            # Log to lab’s game outcomes for cells to query
+            game_recs = payload.get("game_recommendations", {})
+
+            # Store recommendations on the lab object for live query
+            lab = getattr(self.server, 'lab', lab_ref)
+            if lab:
+                lab.taxonomy_cycle = payload.get("cycle", 0)
+                lab.taxonomy_profiles = payload.get("profiles", {})
+                lab.taxonomy_recs = game_recs
+                lab.taxonomy_timestamp = payload.get("timestamp", "")
+
+            self.send_json({
+                "status": "ok",
+                "cycle": payload.get("cycle", 0),
+                "n_cells": n_cells,
+                "game_pd_moves": len(game_recs.get("pd_moves", {})),
+                "game_darwin_strats": len(game_recs.get("darwin_strategies", {})),
+                "game_empathy_gifts": sum(
+                    len(v) for v in game_recs.get("empathy_gifts", {}).values()
+                ),
+                "saved": saved,
+            })
 
         else:
             original_do_POST(self)
