@@ -791,7 +791,33 @@ class DarwinArena:
         with open(self.ledger_path, 'w') as f:
             json.dump(self.state, f, indent=2)
 
-    def run_generation(self, cells):
+    def _load_reputation(self):
+        rep_path = os.path.join(os.path.dirname(self.ledger_path), 'game-reputation-ledger.json')
+        try:
+            with open(rep_path) as f:
+                return json.load(f).get('reputations', {})
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def run_generation(self, cells, reputation_bonus=0.0, reputation_mode='additive'):
+        """
+        Run one generation of Darwin's Arena.
+        
+        Parameters:
+          reputation_bonus: strength of reputation effect
+          reputation_mode: 
+            'additive'  — flat +/- adjustment to fitness (original)
+            'multiplier' — fitness = fitness * (1 - betray_rate * bonus) 
+            'exclusion'  — agents with betray_rate > threshold are excluded from reproduction
+            'hybrid'     — multiplier + bonus on cooperate rate
+        
+        reputation_mode='multiplier' is the recommended fix:
+        A serial defector (betray_rate≈1.0) with bonus=0.8 sees 80% fitness reduction.
+        This is > the ~62% advantage defectors get from the PD payoff matrix,
+        making cooperation competitive.
+        """
+        # Load reputation data from the main games reputation ledger
+        rep = self._load_reputation()
         if not cells:
             return []
         pop = []
@@ -824,6 +850,52 @@ class DarwinArena:
                     pop[i]['strategy'] = 'defect'
                 if s2 == 'grudge' and not c1:
                     pop[j]['strategy'] = 'defect'
+
+        # Apply reputation effect if enabled
+        if reputation_bonus > 0 and reputation_mode != 'additive':
+            for p in pop:
+                cell_rep = rep.get(p['cell'], {})
+                coop_rate = cell_rep.get('cooperate_rate', 0)
+                bet_count = cell_rep.get('betray_count', 0)
+                coop_count = cell_rep.get('cooperate_count', 0)
+                total_games = coop_count + bet_count
+                p['betray_rate'] = round(bet_count / max(total_games, 1), 3) if total_games > 0 else 0
+                p['coop_rate'] = round(coop_count / max(total_games, 1), 3) if total_games > 0 else coop_rate
+                p['reputation_adj'] = 0.0
+
+                if total_games == 0:
+                    continue
+
+                bet_rate = p['betray_rate']
+                
+                if reputation_mode == 'multiplier':
+                    # Fitness * (1 - betray_rate * bonus)
+                    # A serial defector (bet_rate=1.0) with bonus=0.8 sees 80% fitness cut
+                    multiplier = max(0.01, 1.0 - bet_rate * reputation_bonus)
+                    original_fitness = p['fitness']
+                    p['fitness'] = max(0.01, p['fitness'] * multiplier)
+                    p['reputation_adj'] = round(p['fitness'] - original_fitness, 3)
+                    p['rep_multiplier'] = round(multiplier, 3)
+                    
+                elif reputation_mode == 'exclusion':
+                    # Exclusion from reproduction if betray_rate > threshold
+                    # We mark them — sort will put them last
+                    threshold = max(0.3, 1.0 - reputation_bonus)
+                    if bet_rate > threshold:
+                        # Severe penalty: set fitness near zero
+                        original_fitness = p['fitness']
+                        p['fitness'] = 0.01
+                        p['reputation_adj'] = round(0.01 - original_fitness, 3)
+                        p['rep_excluded'] = True
+                    
+                elif reputation_mode == 'hybrid':
+                    # multiplier on betrayal + bonus on cooperation
+                    mult = max(0.01, 1.0 - bet_rate * reputation_bonus * 0.5)
+                    bonus = coop_rate * reputation_bonus * 2
+                    original_fitness = p['fitness']
+                    p['fitness'] = max(0.01, p['fitness'] * mult + bonus)
+                    p['reputation_adj'] = round(p['fitness'] - original_fitness, 3)
+                    p['rep_multiplier'] = round(mult, 3)
 
         pop.sort(key=lambda x: x['fitness'], reverse=True)
         survivors = pop[:max(2, len(pop) // 2)]
@@ -1051,6 +1123,25 @@ diplomacy_engine = DiplomacyEngine(COLONY)
 # 🎲 Expanded GamesHandler — new routes appended to the existing handler
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Personality Mirror + Norm Formation Engine 🪞
+# Imports the Behavioral Understanding module that reads game ledgers
+# and produces cell fingerprints, self-narratives, and social norms.
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import importlib.util
+_mirror_integration_spec = importlib.util.spec_from_file_location(
+    "colony_mirror_integration",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "colony-mirror-integration.py")
+)
+if _mirror_integration_spec and _mirror_integration_spec.loader:
+    _mirror_integration_mod = importlib.util.module_from_spec(_mirror_integration_spec)
+    _mirror_integration_spec.loader.exec_module(_mirror_integration_mod)
+    _mirror_integration_mod.mirror_norms_integrate(globals(), COLONY)
+    print(f"[MIRROR] 🪞 Personality Mirror + 👮 Norm Formation loaded", file=sys.stderr)
+else:
+    print(f"[MIRROR] WARNING: colony-mirror-integration.py not found — mirror/norms disabled", file=sys.stderr)
+
 # Monkey-patch the existing GamesHandler to add expanded routes.
 # This works because Python allows patching class methods at runtime.
 _orig_do_GET = GamesHandler.do_GET
@@ -1073,6 +1164,17 @@ def _expanded_do_GET_impl(self):
     parsed = urlparse(self.path)
     path = parsed.path
     params = parse_qs(parsed.query)
+
+    # 🪞 Personality Mirror + 👮 Norm Formation — check new routes FIRST
+    try:
+        handler, handler_params = _mirror_get_handler(path)
+        if handler:
+            combined_params = {k: v[0] if len(v) == 1 else v for k, v in params.items()}
+            for k, v in handler_params.items():
+                combined_params[k] = v
+            return handler(self, combined_params)
+    except Exception as e:
+        pass  # fall through to original
 
     # 🎲 Deception Arena
     if path == '/game/deception/status':
@@ -1136,6 +1238,14 @@ def _expanded_do_POST_impl(self):
     except json.JSONDecodeError as e:
         return self.send_json({'error': f'Invalid JSON: {e}'}, 400)
 
+    # 🪞 Personality Mirror + 👮 Norm Formation — check new routes FIRST
+    try:
+        handler, handler_params, _ = _mirror_post_handler(path)
+        if handler:
+            return handler(self, handler_params, data)
+    except Exception as e:
+        pass  # fall through to original
+
     # 🕵️ Deception Arena
     if path == '/game/deception/claim':
         cell = data.get('cell', '')
@@ -1164,8 +1274,22 @@ def _expanded_do_POST_impl(self):
     # 🧬 Darwin's Arena
     if path == '/game/darwin/generation':
         cells = data.get('cells', lab.get_active_cell_ids())
-        population = darwin_arena.run_generation(cells)
-        return self.send_json({'generation': darwin_arena.state['generation'], 'population': population})
+        reputation_bonus = float(data.get('reputation_bonus', 0.0))
+        reputation_mode = data.get('reputation_mode', 'additive')
+        population = darwin_arena.run_generation(
+            cells, 
+            reputation_bonus=reputation_bonus,
+            reputation_mode=reputation_mode
+        )
+        rec = {'generation': darwin_arena.state['generation'], 'population': population}
+        if reputation_bonus > 0:
+            rep_adjs = [{'cell': p['cell'], 'strategy': p['strategy'], 'fitness': round(p['fitness'], 3),
+                         'rep_adj': p.get('reputation_adj', 0),
+                         'betray_rate': p.get('betray_rate', 0),
+                         'rep_multiplier': p.get('rep_multiplier', None)}
+                        for p in population if p.get('reputation_adj', 0) != 0]
+            rec['reputation_adjustments'] = rep_adjs
+        return self.send_json(rec)
 
     # 👑 Diplomacy
     if path == '/game/diplomacy/pact':
@@ -1234,6 +1358,7 @@ def expanded_main():
     print("║  💚 Empathy Loop            🎲 Recursive Meta-Bet   ║", file=sys.stderr)
     print("║  🕵️ Deception Arena         🧬 Darwin's Arena       ║", file=sys.stderr)
     print("║  👑 Diplomacy               📊 Fitness Engine       ║", file=sys.stderr)
+    print("║  🪞 Personality Mirror       👮 Norm Formation      ║", file=sys.stderr)
     print("╚═══════════════════════════════════════════════════════╝", file=sys.stderr)
     print(file=sys.stderr)
     print(f"  Port: {PORT}  |  Colony: {COLONY}", file=sys.stderr)
