@@ -41,7 +41,7 @@ All services run on localhost. Ports are fixed — do not change them.
 |-----------|------|------|
 | **gc-pid-bridge** | `gc-pid-bridge/target/release/gc-pid-bridge` | ARM PID bridge (Kp=10, Ki=1.0, Kd=0.10) |
 | **gc-intelligent.sh** | `scripts/gc-intelligent.sh` | Host disk GC orchestrator |
-| **ternary-gc-advisor.py** | `scripts/ternary-gc-advisor.py` | Swarm advisor, ternary {-1,0,+1} votes |
+| **ternary-gc-advisor.py** | `scripts/ternary-gc-advisor.py` | Swarm advisor, ternary {-1,0,+1} votes *(planned — not yet present in repo; `gc-intelligent.sh` degrades gracefully without it)* |
 
 ### Fleet MIDI (16 agents)
 
@@ -162,7 +162,7 @@ PID-controlled host disk GC. Ternary decision theory at the metal layer.
 
 - **PID bridge:** `gc-pid-bridge/target/release/gc-pid-bridge`
 - **GC script:** `scripts/gc-intelligent.sh`
-- **Swarm advisor:** `scripts/ternary-gc-advisor.py`
+- **Swarm advisor:** `scripts/ternary-gc-advisor.py` *(planned stub — not yet present in repo; `gc-intelligent.sh` falls back to local PID when absent)*
 - **Ledger:** `data/gc-ledger/ledger.jsonl`
 - **Cross-domain:** `baton-system/docs/CROSS_DOMAIN_SYNERGY.md`
 

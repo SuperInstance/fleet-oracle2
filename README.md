@@ -88,7 +88,7 @@ Plus supporting daemons (log to `/tmp/`):
 
 ---
 
-## Pipeline (9 Steps, every 5 min)
+## Pipeline (every 5 min)
 
 1. **Collect metrics** — disk%, free RAM, load, uptime, active services
 2. **Compute γ (complexity)** = `disk_pct × 10 + load × 100`
@@ -102,7 +102,12 @@ Plus supporting daemons (log to `/tmp/`):
 10. **Self-tune** — `pulse-self-tune.sh` adjusts GC setpoint (10–40%) based on ratio + trend
 11. **Auto-evict** — `gc-auto-evict.sh` triggers `gc-intelligent.sh --execute` if setpoint ≤ 15%
 
-> Step numbering in code reflects the original 9-step design; the actual pipeline is 11 steps.
+> The cron pipeline (`pulse-metric.sh`) is 12 steps in source: steps 1–11
+> above plus a `7.5` anomaly half-step, a Cloudflare feed push (step 10), a
+> gamma spike/dip predictor (step 12), and a healthcheck ping (step 11).
+> Steps 10–12 are slightly reordered relative to their numbers in the source.
+> (`pulse.sh`, by contrast, is the separate 15-minute systemd-timer relay that
+> queries the oracle and logs rotation fields — not the 5-minute cron above.)
 
 ---
 
@@ -137,6 +142,12 @@ Plus supporting daemons (log to `/tmp/`):
 | Kd | 0.2 | Derivative gain |
 
 Calibrate automatically: `./scripts/gc-intelligent.sh --calibrate`
+
+> **Status note — swarm advisor:** `gc-intelligent.sh` optionally consults a
+> swarm advisor (`scripts/ternary-gc-advisor.py`, ternary {-1,0,+1} votes) for
+> a policy override. That script is **not yet present** in this repo; `gc-intelligent.sh`
+> guards it with `[ -f ]` and degrades gracefully to the local PID fallback when
+> absent. Listed as a planned stub, not a live feature.
 
 ### Eviction (gc-auto-evict.sh)
 
