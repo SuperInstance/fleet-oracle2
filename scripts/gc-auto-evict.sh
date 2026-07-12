@@ -123,14 +123,29 @@ main() {
 
   log "gc-intelligent.sh exit code: ${gc_exitcode}"
 
-  # Parse freed_kb from output — look for size suffixes like 1.2G or 500M
+  # Parse reclaimed amount from gc-intelligent.sh output. The summary line prints
+  # a human-readable size with a unit suffix (e.g. "1.2G", "500M"); the old parser
+  # stripped the unit with `tr -d '[:alpha:]'`, turning "1.2G" into "1.2" and
+  # reporting it as KB — off by ~1,000,000x for G and ~1,000x for M. Convert the
+  # unit back to KB instead. (mb2h uses 1024 divisors, so M=MiB, G=GiB, T=TiB.)
+  local freed_human
+  freed_human=$(echo "$gc_output" \
+    | grep -iE 'reclaim' \
+    | grep -oE '[0-9]+\.?[0-9]*[KMGT]' \
+    | tail -1)
+
   local freed_kb="0"
-  freed_kb=$(echo "$gc_output" \
-    | grep -iE 'reclaimed|evicted' \
-    | grep -oE '[0-9]+\.?[0-9]*[KMG]' \
-    | tail -1 \
-    | tr -d '[:alpha:]' \
-    || echo "0")
+  if [[ -n "$freed_human" ]]; then
+    freed_kb=$(python3 -c "
+import re, sys
+m = re.match(r'([0-9.]+)\s*([KMGT]?)', '$freed_human'.strip())
+if not m:
+    print(0); sys.exit()
+val = float(m.group(1)); unit = m.group(2)
+mult = {'':1, 'K':1, 'M':1024, 'G':1048576, 'T':1073741824}.get(unit, 1)
+print(int(val * mult))
+" 2>/dev/null || echo "0")
+  fi
 
   log "gc-intelligent.sh freed: ${freed_kb}KB"
 
