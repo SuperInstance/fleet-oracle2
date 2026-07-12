@@ -93,12 +93,19 @@ impl MetricStore {
     }
 
     /// Burn signal: recent γ rising while η stays flat (±2).
+    ///
+    /// "Rising" means *strictly* increasing — a perfectly stable system (all γ
+    /// equal, all η equal) must NOT register as a burn. The previous `>=` made
+    /// every flat window count as "rising", producing a false burn alarm on a
+    /// healthy, idle box and forcing maximum GC aggression via the self-tuner.
     pub fn detect_burn(&self) -> bool {
         if self.reports.len() < 5 {
             return false;
         }
         let recent: Vec<_> = self.reports.iter().rev().take(5).collect();
-        let gamma_rising = recent.windows(2).all(|w| w[0].gamma >= w[1].gamma);
+        // recent[0] is newest, recent[4] is oldest. "Rising" = each step strictly
+        // greater than the one before (newer > older when read oldest→newest).
+        let gamma_rising = recent.windows(2).all(|w| w[0].gamma > w[1].gamma);
         let eta_flat = recent
             .windows(2)
             .all(|w| (w[0].eta as i64 - w[1].eta as i64).abs() <= 2);
@@ -138,5 +145,82 @@ impl MetricStore {
             c_trend: self.trend_vec(|r| r.c(), trend_count),
             recent_reports: self.reports.iter().rev().take(20).cloned().collect(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rpt(gamma: u64, eta: u64) -> Report {
+        Report {
+            agent: "test".into(),
+            gamma,
+            eta,
+            task: "t".into(),
+            timestamp: "2026-07-11T00:00:00Z".into(),
+        }
+    }
+
+    #[test]
+    fn c_is_gamma_plus_eta() {
+        assert_eq!(rpt(634, 340).c(), 974);
+    }
+
+    #[test]
+    fn gamma_ratio_avoids_div_by_zero() {
+        assert_eq!(rpt(634, 0).gamma_ratio(), f64::MAX);
+        assert!((rpt(634, 340).gamma_ratio() - 1.8647058823529412).abs() < 1e-9);
+    }
+
+    #[test]
+    fn detect_burn_false_on_flat_stable_system() {
+        // A perfectly stable system: identical γ and η across all reports.
+        // This MUST NOT register as a burn. (Previously returned true due to `>=`.)
+        let mut store = MetricStore::new(100);
+        for _ in 0..5 {
+            store.push(rpt(800, 400));
+        }
+        assert!(!store.detect_burn(), "stable system flagged as burning");
+    }
+
+    #[test]
+    fn detect_burn_true_on_strictly_rising_gamma_flat_eta() {
+        // γ strictly increasing each step, η flat → genuine burn.
+        let mut store = MetricStore::new(100);
+        // Push oldest→newest; detect_burn reads newest first internally.
+        for g in [100u64, 120, 140, 160, 180] {
+            store.push(rpt(g, 400));
+        }
+        assert!(store.detect_burn(), "rising γ with flat η should burn");
+    }
+
+    #[test]
+    fn detect_burn_false_when_eta_is_not_flat() {
+        // γ rising but η also moving → not a burn (effort is scaling too).
+        let mut store = MetricStore::new(100);
+        for (g, e) in [(100u64, 400), (120, 410), (140, 420), (160, 430), (180, 440)] {
+            store.push(rpt(g, e));
+        }
+        assert!(!store.detect_burn());
+    }
+
+    #[test]
+    fn detect_burn_false_with_too_few_reports() {
+        let mut store = MetricStore::new(100);
+        store.push(rpt(100, 400));
+        assert!(!store.detect_burn());
+    }
+
+    #[test]
+    fn ring_buffer_evicts_oldest() {
+        let mut store = MetricStore::new(3);
+        store.push(rpt(1, 1));
+        store.push(rpt(2, 1));
+        store.push(rpt(3, 1));
+        store.push(rpt(4, 1));
+        assert_eq!(store.reports.len(), 3);
+        assert_eq!(store.reports.front().unwrap().gamma, 2);
+        assert_eq!(store.reports.back().unwrap().gamma, 4);
     }
 }
