@@ -25,8 +25,8 @@ declare -A SERVICES=(
   [log]=http://localhost:8781
   [event]=http://localhost:8782
   [conductor]=http://localhost:8769
-  [headspace]=http://localhost:8800
-  [gc-pid]=http://localhost:8080
+  [headspace]=http://localhost:9090
+  [gc-pid]=http://localhost:8785
 )
 
 VERBOSE="${VERBOSE:-0}"
@@ -343,7 +343,17 @@ test_conductor() {
     return
   fi
 
-  if echo "$response" | jq -e '.status // .healthy // true' &>/dev/null; then
+  # Pass only on an explicit healthy signal. The previous check
+  # `jq -e '.status // .healthy // true'` had a trailing `// true` that made
+  # ANY parseable JSON pass (even {"status":"down"} or {}), so the test was
+  # fake-green and never reported a real conductor failure.
+  if echo "$response" | jq -e '
+      (.healthy == true)
+      or (.status == "ok")
+      or (.status == "healthy")
+      or (.status == "up")
+      or (.status == "UP")
+    ' &>/dev/null; then
     record_test "service:conductor" "PASS" "Conductor healthy"
     return
   fi

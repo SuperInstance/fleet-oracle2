@@ -27,6 +27,16 @@ RATIO_CRIT="${RATIO_CRIT:-5.0}"
 CONFIDENCE_LOW="${CONFIDENCE_LOW:-0.3}"
 BOTTLE_TTL_HOURS="${BOTTLE_TTL_HOURS:-1}"
 
+# ── Telegram alerting (opt-in) ────────────────────────────────────────────────
+# Provide the bot token via the TELEGRAM_BOT_TOKEN env var (e.g. a systemd
+# EnvironmentFile). Do NOT embed secrets in this repo — the previous default
+# hardcoded a live bot token; it has been removed and must be rotated.
+TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
+TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-8709904335}"
+TELEGRAM_ENABLED="${TELEGRAM_ENABLED:-false}"  # opt-in: set to "true" to enable
+# Cooldown: max 1 alert per 30 min per alert type
+TELEGRAM_COOLDOWN_DIR="${TELEGRAM_COOLDOWN_DIR:-/tmp/construct-webhook-cooldown}"
+
 # Rotation feed (for confidence extraction)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONSTRUCT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -37,6 +47,58 @@ now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 uuid()    { cat /proc/sys/kernel/random/uuid 2>/dev/null || python3 -c "import uuid; print(uuid.uuid4())"; }
 
 log() { echo "[$(now_iso)] [pulse-webhook] $*" >> "$PULSE_WEBHOOK_LOG"; }
+
+# ── Send a Telegram alert (opt-in, high-priority events) ──────────────────────
+# Telegram is OFF by default. When TELEGRAM_ENABLED=true it also requires
+# TELEGRAM_BOT_TOKEN. A 30-min per-type cooldown guards against alert storms.
+# NB: This must be defined before send_harbor_bottle() / main "$@" run, which is
+# why it lives in the helpers section (the old copy-after-main version was dead
+# code that never executed during a real run).
+send_telegram() {
+  local alert_type="$1"
+  local message="$2"
+
+  if [[ "$TELEGRAM_ENABLED" != "true" ]]; then
+    return 0
+  fi
+  if [[ -z "$TELEGRAM_BOT_TOKEN" ]]; then
+    log "Telegram enabled but TELEGRAM_BOT_TOKEN is unset — skipping ${alert_type}"
+    return 0
+  fi
+
+  mkdir -p "$TELEGRAM_COOLDOWN_DIR"
+
+  local cooldown_file="${TELEGRAM_COOLDOWN_DIR}/${alert_type}"
+  if [[ -f "$cooldown_file" ]]; then
+    local age
+    age=$(($(date +%s) - $(stat -c %Y "$cooldown_file" 2>/dev/null || echo 0)))
+    if [[ $age -lt 1800 ]]; then
+      log "Telegram cooldown: ${alert_type} sent ${age}s ago (< 1800s)"
+      return 0
+    fi
+  fi
+
+  local payload
+  payload=$(python3 -c "
+import json
+msg = '🔧 [Construct Stack]\\n'
+msg += 'Alert: ${alert_type}\\n'
+msg += '${message}'
+print(json.dumps({'chat_id': '${TELEGRAM_CHAT_ID}', 'text': msg, 'parse_mode': 'HTML'}))
+")
+
+  local resp
+  resp=$(curl -sf -X POST \
+    "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+    -H "Content-Type: application/json" \
+    -d "$payload" 2>/dev/null) || {
+    log "WARNING: Telegram send failed (muted)"
+    return 1
+  }
+
+  touch "$cooldown_file"
+  log "Telegram sent: ${alert_type}"
+}
 
 # ── Fetch conservation-meter status ───────────────────────────────────────────
 fetch_status() {
@@ -99,6 +161,10 @@ print(json.dumps(b))
 
   if [[ "$harbor_status" == "ok" ]]; then
     log "BOTTLE SENT: ${alert_type} | id=${bottle_id} | ${alert_body} | harbor=${harbor_status}"
+    # Fan out high-priority alerts (priority >= 4) to Telegram (opt-in).
+    if [[ "${priority:-0}" -ge 4 ]]; then
+      send_telegram "$alert_type" "$alert_body" || true
+    fi
     return 0
   else
     local harbor_msg
@@ -212,75 +278,3 @@ print('true' if conf < low else 'false')
 
 main "$@"
 
-# ── Telegram alerting ─────────────────────────────────────────────────────────
-# Sends an urgent message to the operator's Telegram via the gateway's bot token.
-# Uses a shell-friendly POST to the Telegram Bot API.
-
-TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-8673869550:AAFydhVjoY1ML3kFh_H9HHDvxhM4ASbM6lY}"
-TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-8709904335}"
-TELEGRAM_ENABLED="${TELEGRAM_ENABLED:-true}"  # opt-in: set to true to enable
-# Cooldown: prevent alert spam (max 1 per 30 min per alert type)
-TELEGRAM_COOLDOWN_DIR="${TELEGRAM_COOLDOWN_DIR:-/tmp/construct-webhook-cooldown}"
-mkdir -p "$TELEGRAM_COOLDOWN_DIR"
-
-send_telegram() {
-  local alert_type="$1"
-  local message="$2"
-
-  if [[ "$TELEGRAM_ENABLED" != "true" ]]; then
-    return 0
-  fi
-
-  # Cooldown: skip if we sent this alert type within the last 30 minutes
-  local cooldown_file="${TELEGRAM_COOLDOWN_DIR}/${alert_type}"
-  if [[ -f "$cooldown_file" ]]; then
-    local age
-    age=$(($(date +%s) - $(stat -c %Y "$cooldown_file" 2>/dev/null || echo 0)))
-    if [[ $age -lt 1800 ]]; then
-      log "Telegram cooldown: ${alert_type} sent ${age}s ago (< 1800s)"
-      return 0
-    fi
-  fi
-
-  local payload
-  payload=$(python3 -c "
-import json
-msg = '🔧 [Construct Stack]\\n'
-msg += 'Alert: ${alert_type}\\n'
-msg += '${message}'
-print(json.dumps({'chat_id': '${TELEGRAM_CHAT_ID}', 'text': msg, 'parse_mode': 'HTML'}))
-")
-
-  local resp
-  resp=$(curl -sf -X POST \
-    "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-    -H "Content-Type: application/json" \
-    -d "$payload" 2>/dev/null) || {
-    log "WARNING: Telegram send failed (muted)"
-    return 1
-  }
-
-  # Touch cooldown file
-  touch "$cooldown_file"
-  log "Telegram sent: ${alert_type}"
-}
-
-# Override send_harbor_bottle to also send Telegram for high-priority alerts
-# This wraps the existing function — alerts with priority >= 4 also go to Telegram.
-_original_send_harbor_bottle() {
-  send_harbor_bottle "$@"
-}
-
-send_harbor_bottle() {
-  local alert_type="$1"
-  local alert_body="$2"
-  local priority="$3"
-
-  # Call original
-  _original_send_harbor_bottle "$alert_type" "$alert_body" "$priority"
-
-  # Also send Telegram for priority >= 4 (ALARM, BURN)
-  if [[ "$priority" -ge 4 ]] && [[ "$TELEGRAM_ENABLED" == "true" ]]; then
-    send_telegram "$alert_type" "$alert_body"
-  fi
-}

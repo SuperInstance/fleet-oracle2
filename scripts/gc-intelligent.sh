@@ -597,12 +597,10 @@ main() {
   echo -e "  🎛️  PID aggression: ${aggression}x"
 
   # Phase 3: Evict
+  # phase_evict behaves the same in every mode (it inspects $MODE internally),
+  # so the previous if/else duplicated an identical call. Run it once.
   local freed_kb
-  if [ "$MODE" = "--execute" ] || [ "$MODE" = "--deep" ]; then
-    freed_kb=$(phase_evict "$avail" "$total" "$pct" "$aggression" "$is_deep")
-  else
-    freed_kb=$(phase_evict "$avail" "$total" "$pct" "$aggression" "$is_deep")
-  fi
+  freed_kb=$(phase_evict "$avail" "$total" "$pct" "$aggression" "$is_deep")
   freed_kb=$(echo "$freed_kb" | tail -1)
 
   # Phase 4: Self-audit

@@ -428,9 +428,28 @@ fn get_conservation_value(label: &str) -> Option<f64> {
 
 // ── pulse-check ─────────────────────────────────────────────────────────
 
+/// Truncate to at most `max` bytes on a UTF-8 char boundary. Never panics on
+/// multi-byte characters, unlike a raw `&s[..max]` slice.
+fn safe_truncate(s: &str, max: usize) -> &str {
+    if s.len() <= max {
+        return s;
+    }
+    let mut end = max;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
+
 fn task_pulse_check(_state: &State) -> Result<HashMap<String, serde_json::Value>> {
-    let services: Vec<(&str, &str)> = vec![
-        ("harbor-tcp", "http://localhost:8796/"),
+    use std::net::{SocketAddr, TcpStream};
+
+    // harbor-daemon listens on :8796 with a raw TCP/JSON-line protocol (NOT
+    // HTTP). Probing it with an HTTP GET always fails — the daemon reads the
+    // request line as JSON, errors, and replies with a bare JSON object that
+    // reqwest cannot parse as HTTP. Probe :8796 with a TCP connect instead, and
+    // reserve HTTP GET for the services that actually speak HTTP.
+    let http_services: Vec<(&str, &str)> = vec![
         ("harbor-http", "http://localhost:8797/"),
         ("conservation-meter", "http://localhost:8798/"),
         ("rotation-feed", "http://localhost:8799/"),
@@ -443,7 +462,16 @@ fn task_pulse_check(_state: &State) -> Result<HashMap<String, serde_json::Value>
         .build()?;
 
     let mut matrix = HashMap::new();
-    for (name, url) in &services {
+
+    // TCP liveness probe for harbor's raw-TCP port.
+    let harbor_addr: SocketAddr = ([127, 0, 0, 1], 8796).into();
+    let harbor_tcp_status = match TcpStream::connect_timeout(&harbor_addr, Duration::from_secs(3)) {
+        Ok(_) => "alive".to_string(),
+        Err(e) => format!("down: {}", e),
+    };
+    matrix.insert("harbor-tcp".to_string(), serde_json::json!(harbor_tcp_status));
+
+    for (name, url) in &http_services {
         let status = match client.get(*url).send() {
             Ok(resp) if resp.status().is_success() => "alive".to_string(),
             Ok(resp) => format!("http-{}", resp.status().as_u16()),
@@ -579,7 +607,7 @@ fn task_logger(_state: &State) -> Result<HashMap<String, serde_json::Value>> {
             let xp = report.get("xp").and_then(|x| x.as_u64()).unwrap_or(0);
             let lineage_str = if lineage.is_empty() { "First generation".to_string() }
                 else { format!("Child of: {}", lineage.join(", ")) };
-            let motto_trunc = if motto.len() > 60 { format!("{}…", &motto[..60]) } else { motto.to_string() };
+            let motto_trunc = if motto.len() > 60 { format!("{}…", safe_truncate(motto, 60)) } else { motto.to_string() };
             lines.push(format!("- **{}**: {} _\"{}\"_ ({}, {} XP)",
                 id, personality, motto_trunc, lineage_str, xp));
         }
@@ -648,7 +676,7 @@ fn task_idle(cell_id: &str, _state: &State) -> Result<HashMap<String, serde_json
 /// Cell-id format: breeder-<parent1>-<parent2>-<child_name>
 /// Child inherits:
 ///   - Blended personality + lineage
-///   - Base XP = (parent1.xp + parent2.xp) / 10
+///   - Base XP = (parent1.xp + parent2.xp) / 20  (= 10% of the parents' average XP)
 ///   - Speed mutation: -2 to +2 ms on inherited duration
 ///   - traits object: speed (fast|medium|slow), resilience (low|medium|high)
 ///   - 20% mutation rate on each trait
@@ -797,8 +825,8 @@ fn task_breeder(parent1: &str, parent2: &str, child_id: &str) -> Result<HashMap<
                     pers1.split(' ').last().unwrap_or("X"),
                     pers2.split(' ').last().unwrap_or("Y")),
                  format!("{} AND TOGETHER: {}",
-                     &motto1[..motto1.len().min(40)],
-                     &motto2[..motto2.len().min(40)]))
+                     safe_truncate(motto1, 40),
+                     safe_truncate(motto2, 40)))
             };
 
             // Create child cell directory
@@ -1017,13 +1045,29 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    let colony_path = {
-        let idx = args.iter().position(|a| a == "--colony").unwrap_or(0);
-        PathBuf::from(&args[idx + 1])
+    // Resolve --colony / --cell-id safely. The previous code used
+    // `position(...).unwrap_or(0)` then `args[idx + 1]`, which read the wrong
+    // argument when a flag was absent and panicked (index out of bounds) when a
+    // flag was the last token.
+    fn arg_value<'a>(args: &'a [String], flag: &'a str) -> Option<&'a String> {
+        let idx = args.iter().position(|a| a == flag)?;
+        args.get(idx + 1)
+    }
+    let colony_path = match arg_value(&args, "--colony") {
+        Some(p) => PathBuf::from(p),
+        None => {
+            eprintln!("Usage: cell --colony <path> --cell-id <name>");
+            eprintln!("  missing required --colony <path>");
+            std::process::exit(1);
+        }
     };
-    let cell_id = {
-        let idx = args.iter().position(|a| a == "--cell-id").unwrap_or(0);
-        args[idx + 1].clone()
+    let cell_id = match arg_value(&args, "--cell-id") {
+        Some(v) => v.clone(),
+        None => {
+            eprintln!("Usage: cell --colony <path> --cell-id <name>");
+            eprintln!("  missing required --cell-id <name>");
+            std::process::exit(1);
+        }
     };
 
     // Set COLONY env so tasks like logger/synthesizer can find the colony root
@@ -1155,5 +1199,41 @@ fn main() -> Result<()> {
             eprintln!("cell {}: ERROR ({}ms): {:#}", cell_id, duration_ms, e);
             std::process::exit(1);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::safe_truncate;
+
+    #[test]
+    fn safe_truncate_ascii() {
+        assert_eq!(safe_truncate("hello world", 5), "hello");
+        assert_eq!(safe_truncate("hi", 40), "hi");
+    }
+
+    #[test]
+    fn safe_truncate_multibyte_does_not_panic() {
+        // Emoji are 4 bytes; byte offset 60 inside a run used to panic with
+        // `&s[..60]`. safe_truncate must walk back to a char boundary.
+        let motto = "🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀 extra";
+        let trunc = safe_truncate(motto, 60);
+        assert!(trunc.len() <= 60, "got len {}", trunc.len());
+        assert!(trunc.chars().all(|c| c == '🦀'), "should end on a crab boundary");
+        assert!(!trunc.is_empty());
+    }
+
+    #[test]
+    fn safe_truncate_mid_cjk_char() {
+        // 3-byte CJK chars: byte 7 is mid-character. Must not panic.
+        let s = "你好世界你好世界"; // 8 chars × 3 bytes = 24 bytes
+        let trunc = safe_truncate(s, 7);
+        assert_eq!(trunc, "你好"); // 2 chars = 6 bytes (largest boundary ≤ 7)
+    }
+
+    #[test]
+    fn safe_truncate_empty_and_exact() {
+        assert_eq!(safe_truncate("", 10), "");
+        assert_eq!(safe_truncate("abcd", 4), "abcd");
     }
 }
